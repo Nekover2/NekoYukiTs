@@ -1,34 +1,44 @@
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, PrimaryColumn, ManyToOne } from 'typeorm';
+
 import MemberStatus from "../enums/MemberStatus";
 import Permission from "../enums/Permission";
 import Role from "../enums/Role";
+import IMember from "../interfaces/IMember";
+import IProject from "../interfaces/IProject";
 import IProjectMember from "../interfaces/IProjectMember";
+import Member from './Member';
+import Project from './Project';
 
+// TODO: Add builder pattern to this class
+@Entity()
 export default class ProjectMember implements IProjectMember {
-    discordId: string;
-    projectId: number;
-    roles: number;
-    permissions: number;
-    joinDate: Date;
-    status: MemberStatus;
-    lastActive: Date;
-    isOwner: boolean;
 
-    constructor(
-        discordId: string,
-        projectId: number,
-        joinDate: Date,
-        status: MemberStatus,
-        isOwner: boolean
-    ) {
-        this.discordId = discordId;
-        this.projectId = projectId;
-        this.roles = 0;
-        this.permissions = 0;
-        this.joinDate = joinDate;
-        this.status = status;
-        this.lastActive = joinDate;
-        this.isOwner = isOwner;
-    }
+    @PrimaryGeneratedColumn()
+    id: number = 0;
+
+    @ManyToOne(() => Member, member => member.joinedProjects)
+    member: IMember = new Member();
+
+    @ManyToOne(() => Project, project => project.members)
+    project: IProject = new Project();
+
+    @Column()
+    roles: number = 0;
+
+    @Column()
+    permissions: number = 0;
+    
+    @Column()
+    joinDate: Date = new Date();
+    
+    @Column()
+    status: MemberStatus = MemberStatus.ACTIVE;
+    
+    @Column()
+    lastActive: Date = new Date();
+    
+    @Column()
+    isOwner: boolean = false;
 
     hasRole(role: Role): boolean {
         if ((this.roles & role) === role) {

@@ -1,26 +1,35 @@
+import { Column, Entity, OneToMany, PrimaryColumn } from "typeorm";
 import MemberStatus from "../enums/MemberStatus";
 import Permission from "../enums/Permission";
 import Role from "../enums/Role";
 import IMember from "../interfaces/IMember";
 import IProjectMember from "../interfaces/IProjectMember";
-export default class Member implements IMember {
-    discordId: string;
-    status: MemberStatus;
-    roles: number;
-    permissions: number;
-    joinDate: Date;
-    gmail: string;
-    joinedProjects: IProjectMember[];
+import ProjectMember from "./ProjectMember";
 
-    constructor(discordId: string, gmail: string) {
-        this.discordId = discordId;
-        this.gmail = gmail;
-        this.status = MemberStatus.ACTIVE;
-        this.roles = 0;
-        this.permissions = 0;
-        this.joinDate = new Date();
-        this.joinedProjects = [];
-    }
+
+// TODO: Add builder pattern to this class
+@Entity()
+export default class Member implements IMember {
+    @PrimaryColumn()
+    discordId: string = "";
+
+    @Column()
+    status: MemberStatus = MemberStatus.ACTIVE;
+
+    @Column()
+    roles: number = 0;
+    
+    @Column()
+    permissions: number = 0;
+    
+    @Column()
+    joinDate: Date = new Date();
+    
+    @Column()
+    gmail: string = "";
+
+    @OneToMany(() => ProjectMember, projectMember => projectMember.member)
+    joinedProjects: IProjectMember[] = [];
     
     hasRole(role: Role): boolean {
         if ((this.roles & role) === role) {
@@ -77,10 +86,10 @@ export default class Member implements IMember {
     }
 
     addJoinedProject(joinedProjectInfo: IProjectMember): void {
-        if(joinedProjectInfo.discordId !== this.discordId) {
+        if(joinedProjectInfo.member.discordId !== this.discordId) {
             return;
         }
-        if(this.joinedProjects.find((project) => project.projectId === joinedProjectInfo.projectId)) {
+        if(this.joinedProjects.find((project) => project.id === joinedProjectInfo.project.id)) {
             return;
         }
         this.joinedProjects.push(joinedProjectInfo);
