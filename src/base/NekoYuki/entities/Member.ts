@@ -29,7 +29,8 @@ export default class Member implements IMember {
     gmail: string = "";
 
     @OneToMany(() => ProjectMember, projectMember => projectMember.member)
-    joinedProjects: IProjectMember[] = [];
+    // @ts-ignore
+    joinedProjects: IProjectMember[];
     
     hasRole(role: Role): boolean {
         if ((this.roles & role) === role) {

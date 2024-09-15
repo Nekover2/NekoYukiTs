@@ -1,3 +1,4 @@
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import MemberStatus from "../enums/MemberStatus";
 import Permission from "../enums/Permission";
 import ProjectStatus from "../enums/ProjectStatus";
@@ -8,15 +9,30 @@ import IProjectMember from "../interfaces/IProjectMember";
 import ProjectMember from "./ProjectMember";
 // TODO: Add builder pattern to this class
 
+@Entity()
 export default class Project implements IProject {
+    @PrimaryGeneratedColumn()
     id: number = 0;
-    name: string = "";
-    lastUpdated: Date = new Date();
-    creationDate: Date = new Date();
-    status: ProjectStatus = ProjectStatus.InProgress;
-    postChannelId: string = "";
-    members: IProjectMember[] = [];
 
+    @Column()
+    name: string = "";
+
+    @Column()
+    lastUpdated: Date = new Date();
+
+    @Column()
+    creationDate: Date = new Date();
+
+    @Column()
+    status: ProjectStatus = ProjectStatus.InProgress;
+
+    @Column()
+    postChannelId: string = "";
+
+    
+    @OneToMany(() => ProjectMember, projectMember => projectMember.project)
+    // @ts-ignore
+    members: IProjectMember[];
 
     addMember(member: IMember, roles: Role[], permissions: Permission[]): IProjectMember | undefined {
         // find the member in the members array

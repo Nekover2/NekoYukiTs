@@ -1,7 +1,6 @@
 import MemberStatus from "../enums/MemberStatus";
 import Role from "../enums/Role";
 import Permission from "../enums/Permission";
-import IProject from "./IProject";
 import IProjectMember from "./IProjectMember";
 export default interface IMember{
     discordId : string;
