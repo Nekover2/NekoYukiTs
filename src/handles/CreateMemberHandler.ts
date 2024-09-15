@@ -17,5 +17,4 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
         await value.client.dataSources.manager.save(newMember);
         return Promise.resolve();
     }
-
 }

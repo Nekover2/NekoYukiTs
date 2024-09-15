@@ -2,6 +2,7 @@ import { glob } from "glob";
 import IMediator from "../interfaces/IMediator";
 import IMediatorHandle from "../interfaces/IMediatorHandle";
 import IMediatorRequest from "../interfaces/IMediatorRequest";
+import path from "path";
 
 export default class Mediator implements IMediator {
     requests: IMediatorRequest[];
@@ -13,7 +14,7 @@ export default class Mediator implements IMediator {
     }
 
     async LoadHandles(handlerFolder: string): Promise<void> {
-        const files = (await glob(handlerFolder)).map((file) => file);
+        const files = (await glob(handlerFolder)).map((file) => path.resolve(file));
         files.map(async (file: string) => {
             const handle: IMediatorHandle<IMediatorRequest> = new (await import(file)).default();
             if (!handle.name)
@@ -25,7 +26,7 @@ export default class Mediator implements IMediator {
     }
 
     async LoadRequests(requestFolder: string): Promise<void> {
-        const files = (await glob(requestFolder)).map((file) => file);
+        const files = (await glob(requestFolder)).map((file) => path.resolve(file));
         files.map(async (file: string) => {
             const request: IMediatorRequest = new (await import(file)).default();
             if (!request.name)

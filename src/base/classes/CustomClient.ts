@@ -33,7 +33,7 @@ export default class CustomClient extends Client implements ICustomClient{
         this.cooldowns = new Collection();
         this.dataSources = NekoYukiDataSource
         this.mediator = new Mediator();
-        this.mediator.LoadMediator(`${process.cwd()}/build/requests/**/*.js`, `${process.cwd()}/build/handles/**/*.js`);
+        this.mediator.LoadMediator(`build/requests/**/*.js`, `build/handles/**/*.js`);
     }
     Init = async () => {
         await this.dataSources.initialize();
