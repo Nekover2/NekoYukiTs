@@ -1,6 +1,11 @@
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
 import IMediatorHandle from "../base/interfaces/IMediatorHandle";
 import Member from "../base/NekoYuki/entities/Member";
 import CreateMemberRequest from "../requests/CreateMemberRequest";
+import Permission from "../base/NekoYuki/enums/Permission";
+import IError from "../base/interfaces/IError";
+import Error from "../base/classes/Error";
+import ErrorCode from "../base/enums/ErrorCode";
 
 export default class CreateMemberHandler implements IMediatorHandle<CreateMemberRequest> {
     name: string;
@@ -8,13 +13,114 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
         this.name = "CreateMember";
     }
     async handle(value: CreateMemberRequest): Promise<any> {
-        console.log(`[CreateMemberHandler] Handling request ${value.name}`);
-        console.log(`[CreateMemberHandler] Discord ID: ${value.data.discordId}`);
-        console.log(`[CreateMemberHandler] Gmail: ${value.data.gmail}`);
+        // Check if author has permissions
+        const authorMember = await value.data.client.dataSources.getRepository(Member).findOne({
+            where: { discordId: value.data.author.id }
+        });
+
+        if (!authorMember)
+            return Promise.reject("Author is not registered");
+        if (!authorMember.hasPermission(Permission.MangeMember))
+            return Promise.reject("Author does not have permission: Manage Member");
+        const existingMember = await value.data.client.dataSources.getRepository(Member).findOne({ where: { discordId: value.data.member.id } });
+        if (existingMember)
+            return Promise.reject("Member already exists");
+
         const newMember = new Member();
-        newMember.discordId = value.data.discordId;
-        newMember.gmail = value.data.gmail;
-        await value.client.dataSources.manager.save(newMember);
-        return Promise.resolve();
+        newMember.discordId = value.data.member.id;
+        let infoBtnInteraction = await this.sendInfo(value);
+        if (infoBtnInteraction instanceof Error)
+            return infoBtnInteraction;
+        infoBtnInteraction = infoBtnInteraction as ButtonInteraction;
+        const gmail = await this.getInformation(infoBtnInteraction as ButtonInteraction);
+        if (gmail instanceof Error)
+            return gmail;
+        newMember.gmail = gmail as string;
+
+        const createMemberStatusEmbed = new EmbedBuilder()
+            .setTitle(`Registering member ${value.data.member.displayName}`)
+            .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.user.displayAvatarURL() })
+            .setDescription("***Step 1:*** Adding member to the database...")
+            .setColor("Random")
+            .setFooter({ text: "NekoYuki's manager" })
+            .setTimestamp();
+        await infoBtnInteraction.reply({ embeds: [createMemberStatusEmbed] });
+        await value.data.client.dataSources.getRepository(Member).save(newMember);
+
+        createMemberStatusEmbed.setDescription(`***Step 1:*** Adding member to the database... Done\n***Step 2:*** Assigning roles...`);
+        await infoBtnInteraction.editReply({ embeds: [createMemberStatusEmbed] });
+    }
+
+    async sendInfo(value: CreateMemberRequest) : Promise<ButtonInteraction  | IError> {
+        const infoEmbed = new EmbedBuilder()
+            .setTitle(`You are registering member ${value.data.member.displayName}`)
+            .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.user.displayAvatarURL() })
+            .setColor("Random")
+            .setFooter({ text: "NekoYuki's manager" })
+            .setTimestamp()
+            .setDescription(`Before registering the member, please make sure you have the following information:`)
+            .addFields([
+                { name: "Gmail", value: "Member's gmail, required for additional features" }
+            ]);
+
+        const infoAcceptBtn = new ButtonBuilder()
+            .setCustomId("info-accept")
+            .setStyle(ButtonStyle.Success)
+            .setLabel("Accept");
+        const infoDeclineBtn = new ButtonBuilder()
+            .setCustomId("info-decline")
+            .setStyle(ButtonStyle.Danger)
+            .setLabel("Decline");
+
+        const infoRow = new ActionRowBuilder()
+            .addComponents([infoAcceptBtn, infoDeclineBtn]);
+        
+        //@ts-ignore
+        const infoMessage = await value.data.channel.send({ embeds: [infoEmbed], components: [infoRow] });
+        
+        try {
+            const infoInteraction = await infoMessage.awaitMessageComponent({ filter: (interaction) => interaction.user.id === value.data.author.id, time: 30000 });
+            if(infoInteraction.customId === "info-decline") {
+                await infoMessage.delete();
+                return new Error("User declined", ErrorCode.UserCancelled);   
+            }
+            return infoInteraction as ButtonInteraction;
+        } catch (error) {
+            return new Error("User did not respond", ErrorCode.UserCancelled);
+        }
+    }
+
+    async getInformation (interaction : ButtonInteraction) : Promise<string | IError> {
+        const getInfoModal = new ModalBuilder()
+            .setCustomId("get-info-modal")
+            .setTitle("Please Enter Member Information");
+
+        const gmailInput = new TextInputBuilder()
+            .setCustomId("gmail-input")
+            .setPlaceholder("Gmail only. Example: a@gmail.com")
+            .setLabel("Gmail")
+            .setMaxLength(32)
+            .setRequired(true)
+            .setStyle(TextInputStyle.Short);
+        
+        const getInfoRow = new ActionRowBuilder()
+            .addComponents(gmailInput);
+
+        //@ts-ignore
+        getInfoModal.addComponents(getInfoRow);
+        
+        const infoModalRequest = await interaction.showModal(getInfoModal);
+        try {
+            const infoModalInteraction = await interaction.awaitModalSubmit({ filter: (interaction) => interaction.user.id === interaction.user.id, time: 30000 });
+            return infoModalInteraction.fields.getTextInputValue("gmail-input");
+        } catch (error) {
+            return new Error("User did not respond", ErrorCode.UserCancelled);
+        }
+    }
+
+    async assignRoles(value: CreateMemberRequest) {
+        // Todo:...
+        // get roles as configured in the database
+        // assign roles to the member
     }
 }

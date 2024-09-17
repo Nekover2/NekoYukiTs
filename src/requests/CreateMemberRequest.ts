@@ -1,26 +1,26 @@
+import { GuildMember, TextChannel } from "discord.js";
 import ICustomClient from "../base/interfaces/ICustomClient";
 import IMediatorRequest from "../base/interfaces/IMediatorRequest";
 
 export default class CreateMemberRequest implements IMediatorRequest {
-    client: ICustomClient;
     name: string;
     data: CreateMemberOptions;
 
-    constructor(client: ICustomClient, discordId: string, gmail: string) {
-        this.client = client;
+    constructor(client: ICustomClient, channel: TextChannel, member: GuildMember, author: GuildMember) {
         this.name = "CreateMember";
-        this.data = new CreateMemberOptions(client, discordId, gmail);
+        this.data = new CreateMemberOptions(client, channel, member, author);
     }
 }
 
 class CreateMemberOptions {
     client: ICustomClient;
-    discordId: string;
-    gmail: string;
-
-    constructor(client: ICustomClient, discordId: string, gmail: string) {
+    channel: TextChannel;
+    member: GuildMember;
+    author: GuildMember
+    constructor(client: ICustomClient, channel: TextChannel, member: GuildMember, author: GuildMember) {
         this.client = client;
-        this.discordId = discordId;
-        this.gmail = gmail;
+        this.channel = channel;
+        this.member = member;
+        this.author = author;
     }
 }

@@ -3,6 +3,7 @@ import Command from "../../base/classes/Command";
 import CustomClient from "../../base/classes/CustomClient";
 import Category from "../../base/enums/Category";
 import CreateMemberRequest from "../../requests/CreateMemberRequest";
+import Error from "../../base/classes/Error";
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -34,71 +35,33 @@ export default class CreateMember extends Command {
 
         // TODO register member
         try {
-            const infoEmbed = new EmbedBuilder()
-                .setTitle(`You are registering member ${interaction.options.getUser("member")?.displayName}`)
-                .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
-                .setColor("Random")
-                .setFooter({ text: "NekoYuki's manager" })
-                .setTimestamp()
-                .setDescription(`Before registering the member, please make sure you have the following information:`)
-                .addFields([
-                    { name: "Gmail", value: "Member's gmail, required for additional features" }
-                ]);
-    
-            const infoAcceptBtn = new ButtonBuilder()
-                .setCustomId("info-accept")
-                .setStyle(ButtonStyle.Success)
-                .setLabel("Accept");
-            const infoDeclineBtn = new ButtonBuilder()
-                .setCustomId("info-decline")
-                .setStyle(ButtonStyle.Danger)
-                .setLabel("Decline");
-    
-            const infoRow = new ActionRowBuilder()
-                .addComponents([infoAcceptBtn, infoDeclineBtn]);
-            const currentChannel = interaction.channel as TextChannel;
             //@ts-ignore
-            const infoMessage = await currentChannel.send({ embeds: [infoEmbed], components: [infoRow] });
-            const filterInfo = (i: any) => i.customId === "info-accept" || i.customId === "info-decline" && i.user.id === interaction.user.id;
-            const infoResponse = await infoMessage.awaitMessageComponent({ filter: filterInfo, time: 60000 });
-            if (infoResponse.customId === "info-decline") {
-                await infoResponse.update({ content: "Member registration declined", components: [] });
-                return;
+            const createMemberRequest = new CreateMemberRequest(this.client, interaction.channel as TextChannel, interaction.options.getUser("member"), interaction.user);
+            const result = await this.client.mediator.send(createMemberRequest); 
+            if(result instanceof Error) {
+                const currChannel = interaction.channel as TextChannel;
+                const errorEmbed = new EmbedBuilder()
+                    .setTitle("Something went wrong")
+                    .setDescription(result.message + `. ErrorCode: ${result.code}`)
+                    .setColor("Red");
+                const errMsg = await currChannel.send({ embeds: [errorEmbed] });
+                await delay(5000);
+                if(errMsg.deletable) {
+                    await errMsg.delete();
+                }
             }
-    
-            if (infoMessage.deletable)
-                await infoMessage.delete();
-    
-            const getInfoModal = new ModalBuilder()
-                .setCustomId("get-info-modal")
-                .setTitle("Enter member information");
-    
-            const gmailInput = new TextInputBuilder()
-                .setLabel("Gmail")
-                .setCustomId("gmail-input")
-                .setPlaceholder("Member's gmail")
-                .setRequired(true)
-                .setStyle(TextInputStyle.Short);
-    
-            const getInfoRow = new ActionRowBuilder()
-                .addComponents([gmailInput]);
-    
-            //@ts-ignore
-            getInfoModal.addComponents([getInfoRow]);
-    
-            const infoModelRequest = await infoResponse.showModal(getInfoModal);
-    
-            const filterInfoModal = (i: any) => i.customId === "get-info-modal" && i.user.id === interaction.user.id;
-    
-            const infoModalResponse = await interaction.awaitModalSubmit({ filter: filterInfoModal, time: 60000 });
-            const gmail = infoModalResponse.fields.getTextInputValue("gmail-input");
-            await infoModalResponse.reply({ content: `Member's gmail: ${gmail}, please wait...`, components: [] });
-            //@ts-ignore
-            const createMemberRequest = new CreateMemberRequest( this.client, interaction.options.getUser("member")?.id, gmail);
-            await this.client.mediator.send(createMemberRequest); 
-        } catch (error) {
-            console.error(error);
-        }
+        } catch (error : any) {
+            const currChannel = interaction.channel as TextChannel;
+            const errorEmbed = new EmbedBuilder()
+                .setTitle("Something went wrong")
+                .setDescription(error.message)
+                .setColor("Red");
+            const errMsg = await currChannel.send({ embeds: [errorEmbed] });
+            await delay(5000);
+            if(errMsg.deletable) {
+                await errMsg.delete();
+            }
+        }   
 
     }
 }
