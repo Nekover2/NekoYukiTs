@@ -2,25 +2,24 @@ import { GuildMember, TextChannel, User } from "discord.js";
 import ICustomClient from "../base/interfaces/ICustomClient";
 import IMediatorRequest from "../base/interfaces/IMediatorRequest";
 
-export default class CreateMemberRequest implements IMediatorRequest {
+export default class ManageMemberPermissionRequest implements IMediatorRequest {
     name: string;
-    data: CreateMemberOptions;
-
+    data: ManageMemberPermissionOptions;
     constructor(client: ICustomClient, channel: TextChannel, member: User, author: User) {
-        this.name = "CreateMember";
-        this.data = new CreateMemberOptions(client, channel, member, author);
+        this.name = "ManageMemberPermission";
+        this.data = new ManageMemberPermissionOptions(client, channel, member, author);
     }
 }
 
-class CreateMemberOptions {
+class ManageMemberPermissionOptions  {
     client: ICustomClient;
-    channel: TextChannel;
     member: User;
-    author: User
+    channel: TextChannel;
+    author: User;
     constructor(client: ICustomClient, channel: TextChannel, member: User, author: User) {
         this.client = client;
-        this.channel = channel;
         this.member = member;
+        this.channel = channel;
         this.author = author;
     }
 }

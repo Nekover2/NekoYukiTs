@@ -5,18 +5,19 @@ import Category from "../../base/enums/Category";
 import CreateMemberRequest from "../../requests/CreateMemberRequest";
 import CustomError from "../../base/classes/CustomError";
 import ErrorCode from "../../base/enums/ErrorCode";
+import ManageMemberPermissionRequest from "../../requests/ManageMemberPermissionRequest";
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 export default class CreateMember extends Command {
     constructor(client: CustomClient) {
         super(client, {
-            name: "register-member",
+            name: "manage-member-permission",
             description: "Register a member to the database",
             category: Category.NekoYuki,
             options: [{
                 name: "member",
-                description: "The member to register",
+                description: "The member you want to manage",
                 type: ApplicationCommandOptionType.User,
                 required: true
             }],
@@ -36,15 +37,16 @@ export default class CreateMember extends Command {
             // TODO check if member is already registered
 
             // TODO register member
-            console.log(interaction.options.getUser("member")?.displayAvatarURL());
             //@ts-ignore
-            const createMemberRequest = new CreateMemberRequest(this.client, interaction.channel as TextChannel, interaction.options.getUser("member"), interaction.user);
-            const result = await this.client.mediator.send(createMemberRequest);
+            const manageMemberPermissionRequest = new ManageMemberPermissionRequest(this.client, interaction.channel as TextChannel, interaction.options.getUser("member"), interaction.user);
+            const result = await this.client.mediator.send(manageMemberPermissionRequest);
         } catch (error) {
+            
             if (error instanceof CustomError) {
                 throw new CustomError(error.message, error.errorCode, "Create Member");
             }
             throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Member");
+
         }
 
     }

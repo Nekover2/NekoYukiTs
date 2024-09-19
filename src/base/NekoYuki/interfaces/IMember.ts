@@ -22,7 +22,7 @@ export default interface IMember{
 
     getAllRoles() : Role[];
     getAllPermissions() : Permission[];
-    permissionString() : string;
+    permissionString() : Array<string>;
 
     addJoinedProject(joinedProjectInfo : IProjectMember) : void;
 }

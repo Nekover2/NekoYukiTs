@@ -3,6 +3,8 @@ import IMediator from "../interfaces/IMediator";
 import IMediatorHandle from "../interfaces/IMediatorHandle";
 import IMediatorRequest from "../interfaces/IMediatorRequest";
 import path from "path";
+import CustomError from "./CustomError";
+import ErrorCode from "../enums/ErrorCode";
 
 export default class Mediator implements IMediator {
     requests: IMediatorRequest[];
@@ -63,11 +65,21 @@ export default class Mediator implements IMediator {
         }
     }
     send(request: IMediatorRequest): Promise<any> {
-        const handle = this.handles.find((h) => h.name === request.name);
-        if (handle) {
-            return handle.handle(request);
+        try {
+            const handle = this.handles.find((h) => h.name === request.name);
+            if (handle) {
+                return handle.handle(request);
+            }
+            throw new CustomError(`Handle ${request.name} not found`, ErrorCode.BadRequest, "Mediator");
+        } catch (error) {
+            console.log("Error catched ");
+            
+            if (error instanceof CustomError) {
+                throw new CustomError(error.message, error.errorCode, "Mediator");
+            }
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Mediator");
         }
-        return Promise.reject(`Handle for request ${request.name} not found`);
+
     }
 
 }

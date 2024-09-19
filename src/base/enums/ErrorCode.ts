@@ -8,6 +8,7 @@ enum ErrorCode {
     UserCancelled = "USER_CANCELLED",
     InvalidCredentials = "INVALID_CREDENTIALS",
     TimeOut = "TIME_OUT",
+    DatabaseCreateError = "DATABASE_CREATE_ERROR",
 }
 
 export default ErrorCode;

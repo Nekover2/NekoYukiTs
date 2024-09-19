@@ -76,14 +76,16 @@ export default class Member implements IMember {
         }
         return permissions;
     }
-    permissionString(): string {
+    permissionString(): Array<string> {
+        const permissionValues = Object.values(Permission).filter((p) => !isNaN(Number(p)));
+        const permissionKeys = Object.values(Permission).filter((p) => isNaN(Number(p)));
         //TODO : Correctly implement this method
         let permissions: Permission[] = this.getAllPermissions();
-        let permissionString: string = "";
+        let permissionArray: Array<string> = [];
         for (let i = 0; i < permissions.length; i++) {
-            permissionString += Permission[permissions[i]] + ", ";
+            permissionArray.push(permissionKeys[permissionValues.indexOf(permissions[i])].toString());
         }
-        return permissionString;
+        return permissionArray;
     }
 
     addJoinedProject(joinedProjectInfo: IProjectMember): void {

@@ -3,58 +3,65 @@ import IMediatorHandle from "../base/interfaces/IMediatorHandle";
 import Member from "../base/NekoYuki/entities/Member";
 import CreateMemberRequest from "../requests/CreateMemberRequest";
 import Permission from "../base/NekoYuki/enums/Permission";
-import IError from "../base/interfaces/IError";
-import Error from "../base/classes/Error";
+import Error from "../base/classes/CustomError";
 import ErrorCode from "../base/enums/ErrorCode";
+import CustomError from "../base/classes/CustomError";
 
 export default class CreateMemberHandler implements IMediatorHandle<CreateMemberRequest> {
     name: string;
     constructor() {
         this.name = "CreateMember";
     }
-    async handle(value: CreateMemberRequest): Promise<any> {
-        // Check if author has permissions
-        const authorMember = await value.data.client.dataSources.getRepository(Member).findOne({
-            where: { discordId: value.data.author.id }
-        });
+    async handle(value: CreateMemberRequest): Promise<Member> {
+        try {
+            // Check if author has permissions
+            const authorMember = await value.data.client.dataSources.getRepository(Member).findOne({
+                where: { discordId: value.data.author.id }
+            });
 
-        if (!authorMember)
-            return Promise.reject("Author is not registered");
-        if (!authorMember.hasPermission(Permission.MangeMember))
-            return Promise.reject("Author does not have permission: Manage Member");
-        const existingMember = await value.data.client.dataSources.getRepository(Member).findOne({ where: { discordId: value.data.member.id } });
-        if (existingMember)
-            return Promise.reject("Member already exists");
+            // if (!authorMember)
+            //     throw new CustomError("Author is not a member", ErrorCode.UserCannotBeFound, "Create Member");
+            // if (!authorMember.hasPermission(Permission.MangeMember))
+            //     throw new CustomError("Author does not have permission to manage members", ErrorCode.Forbidden, "Create Member");
+            // const existingMember = await value.data.client.dataSources.getRepository(Member).findOne({ where: { discordId: value.data.member.id } });
+            // if (existingMember)
+            //     throw new CustomError("Member is already registered", ErrorCode.UserAlreadyExists, "Create Member");
 
-        const newMember = new Member();
-        newMember.discordId = value.data.member.id;
-        let infoBtnInteraction = await this.sendInfo(value);
-        if (infoBtnInteraction instanceof Error)
-            return infoBtnInteraction;
-        infoBtnInteraction = infoBtnInteraction as ButtonInteraction;
-        const gmail = await this.getInformation(infoBtnInteraction as ButtonInteraction);
-        if (gmail instanceof Error)
-            return gmail;
-        newMember.gmail = gmail as string;
+            const newMember = new Member();
+            newMember.discordId = value.data.member.id;
+            let infoBtnInteraction = await this.sendInfo(value);
+            infoBtnInteraction = infoBtnInteraction as ButtonInteraction;
+            const gmail = await this.getInformation(infoBtnInteraction as ButtonInteraction);
+            newMember.gmail = gmail as string;
 
-        const createMemberStatusEmbed = new EmbedBuilder()
-            .setTitle(`Registering member ${value.data.member.displayName}`)
-            .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.user.displayAvatarURL() })
-            .setDescription("***Step 1:*** Adding member to the database...")
-            .setColor("Random")
-            .setFooter({ text: "NekoYuki's manager" })
-            .setTimestamp();
-        await infoBtnInteraction.reply({ embeds: [createMemberStatusEmbed] });
-        await value.data.client.dataSources.getRepository(Member).save(newMember);
+            const createMemberStatusEmbed = new EmbedBuilder()
+                .setTitle(`Registering member ${value.data.member.displayName}`)
+                .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL() })
+                .setDescription("***Step 1:*** Adding member to the database...")
+                .setColor("Random")
+                .setFooter({ text: "NekoYuki's manager" })
+                .setTimestamp();
+            await infoBtnInteraction.reply({ embeds: [createMemberStatusEmbed] });
+            await this.saveToDatabase(value, newMember);
 
-        createMemberStatusEmbed.setDescription(`***Step 1:*** Adding member to the database... Done\n***Step 2:*** Assigning roles...`);
-        await infoBtnInteraction.editReply({ embeds: [createMemberStatusEmbed] });
+            createMemberStatusEmbed.setDescription(`***Step 1:*** Adding member to the database... Done\n***Step 2:*** Assigning roles...`);
+            await infoBtnInteraction.editReply({ embeds: [createMemberStatusEmbed] });
+            return newMember;
+
+        } catch (error) {
+            if (error instanceof CustomError) {
+                throw new CustomError(error.message, error.errorCode, "Create Member");
+            } else {
+                throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Member");
+            }
+        }
+
     }
 
-    async sendInfo(value: CreateMemberRequest) : Promise<ButtonInteraction  | IError> {
+    async sendInfo(value: CreateMemberRequest): Promise<ButtonInteraction> {
         const infoEmbed = new EmbedBuilder()
             .setTitle(`You are registering member ${value.data.member.displayName}`)
-            .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.user.displayAvatarURL() })
+            .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL() })
             .setColor("Random")
             .setFooter({ text: "NekoYuki's manager" })
             .setTimestamp()
@@ -74,23 +81,23 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
 
         const infoRow = new ActionRowBuilder()
             .addComponents([infoAcceptBtn, infoDeclineBtn]);
-        
+
         //@ts-ignore
         const infoMessage = await value.data.channel.send({ embeds: [infoEmbed], components: [infoRow] });
-        
+
         try {
             const infoInteraction = await infoMessage.awaitMessageComponent({ filter: (interaction) => interaction.user.id === value.data.author.id, time: 30000 });
-            if(infoInteraction.customId === "info-decline") {
+            if (infoInteraction.customId === "info-decline") {
                 await infoMessage.delete();
-                return new Error("User declined", ErrorCode.UserCancelled);   
+                throw new CustomError("User declined", ErrorCode.UserCancelled, "Create Member");
             }
             return infoInteraction as ButtonInteraction;
         } catch (error) {
-            return new Error("User did not respond", ErrorCode.UserCancelled);
+            throw new CustomError("Cancelled create member request due to timeout", ErrorCode.UserCancelled, "Create Member");
         }
     }
 
-    async getInformation (interaction : ButtonInteraction) : Promise<string | IError> {
+    async getInformation(interaction: ButtonInteraction): Promise<string> {
         const getInfoModal = new ModalBuilder()
             .setCustomId("get-info-modal")
             .setTitle("Please Enter Member Information");
@@ -102,19 +109,19 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
             .setMaxLength(32)
             .setRequired(true)
             .setStyle(TextInputStyle.Short);
-        
+
         const getInfoRow = new ActionRowBuilder()
             .addComponents(gmailInput);
 
         //@ts-ignore
         getInfoModal.addComponents(getInfoRow);
-        
+
         const infoModalRequest = await interaction.showModal(getInfoModal);
         try {
             const infoModalInteraction = await interaction.awaitModalSubmit({ filter: (interaction) => interaction.user.id === interaction.user.id, time: 30000 });
             return infoModalInteraction.fields.getTextInputValue("gmail-input");
         } catch (error) {
-            return new Error("User did not respond", ErrorCode.UserCancelled);
+            throw new CustomError("Cancelled create member request due to timeout", ErrorCode.UserCancelled, "Create Member");
         }
     }
 
@@ -123,4 +130,13 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
         // get roles as configured in the database
         // assign roles to the member
     }
+
+    async saveToDatabase(value: CreateMemberRequest, member: Member) {
+        try {
+            await value.data.client.dataSources.getRepository(Member).save(member);
+        } catch (error) {
+            throw new CustomError("Failed to save member to database", ErrorCode.DatabaseCreateError, "Create Member");
+        }
+    }
+
 }
