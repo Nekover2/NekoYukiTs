@@ -18,20 +18,20 @@ export default class Member implements IMember {
 
     @Column()
     roles: number = 0;
-    
+
     @Column()
     permissions: number = 0;
-    
+
     @Column()
     joinDate: Date = new Date();
-    
+
     @Column()
     gmail: string = "";
 
     @OneToMany(() => ProjectMember, projectMember => projectMember.member)
     // @ts-ignore
     joinedProjects: IProjectMember[];
-    
+
     hasRole(role: Role): boolean {
         if ((this.roles & role) === role) {
             return true;
@@ -58,7 +58,7 @@ export default class Member implements IMember {
     }
     getAllRoles(): Role[] {
         let roles: Role[] = [];
-        const roleValues = Object.values(Role);
+        const roleValues = Object.values(Role).filter((r) => !isNaN(Number(r)));
         for (let i = 0; i < roleValues.length; i++) {
             if ((this.roles & (roleValues[i] as Role)) === roleValues[i]) {
                 roles.push(roleValues[i] as Role);
@@ -77,22 +77,25 @@ export default class Member implements IMember {
         return permissions;
     }
     permissionString(): Array<string> {
-        const permissionValues = Object.values(Permission).filter((p) => !isNaN(Number(p)));
-        const permissionKeys = Object.values(Permission).filter((p) => isNaN(Number(p)));
         //TODO : Correctly implement this method
         let permissions: Permission[] = this.getAllPermissions();
         let permissionArray: Array<string> = [];
         for (let i = 0; i < permissions.length; i++) {
-            permissionArray.push(permissionKeys[permissionValues.indexOf(permissions[i])].toString());
+            permissionArray.push(this.getPermissionString(permissions[i]));
         }
         return permissionArray;
     }
 
+    getPermissionString(permission: Permission) {
+        const permissionLabel = Object.keys(Permission).filter((p) => isNaN(Number(p)));
+        const permissionValue = Object.values(Permission).filter((p) => !isNaN(Number(p)));
+        return permissionLabel[permissionValue.indexOf(permission)];
+    }
     addJoinedProject(joinedProjectInfo: IProjectMember): void {
-        if(joinedProjectInfo.member.discordId !== this.discordId) {
+        if (joinedProjectInfo.member.discordId !== this.discordId) {
             return;
         }
-        if(this.joinedProjects.find((project) => project.id === joinedProjectInfo.project.id)) {
+        if (this.joinedProjects.find((project) => project.id === joinedProjectInfo.project.id)) {
             return;
         }
         this.joinedProjects.push(joinedProjectInfo);

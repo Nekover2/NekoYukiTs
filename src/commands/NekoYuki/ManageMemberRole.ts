@@ -2,21 +2,22 @@ import { ActionRowBuilder, Application, ApplicationCommandOptionType, ButtonBuil
 import Command from "../../base/classes/Command";
 import CustomClient from "../../base/classes/CustomClient";
 import Category from "../../base/enums/Category";
-import CreateMemberRequest from "../../requests/CreateMemberRequest";
 import CustomError from "../../base/classes/CustomError";
 import ErrorCode from "../../base/enums/ErrorCode";
+import ManageMemberPermissionRequest from "../../requests/ManageMemberPermissionRequest";
+import ManageMemberRoleRequest from "../../requests/ManageMemberRoleRequest";
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 export default class CreateMember extends Command {
     constructor(client: CustomClient) {
         super(client, {
-            name: "register-member",
-            description: "Register a member to the database",
+            name: "manage-member-role",
+            description: "Update role of a member", 
             category: Category.NekoYuki,
             options: [{
                 name: "member",
-                description: "The member to register",
+                description: "The member you want to manage",
                 type: ApplicationCommandOptionType.User,
                 required: true
             }],
@@ -32,13 +33,15 @@ export default class CreateMember extends Command {
             await interaction.deferReply({ ephemeral: true });
             await interaction.deleteReply();
             //@ts-ignore
-            const createMemberRequest = new CreateMemberRequest(this.client, interaction.channel as TextChannel, interaction.options.getUser("member"), interaction.user);
-            const result = await this.client.mediator.send(createMemberRequest);
+            const manageMemberRoleRequest = new ManageMemberRoleRequest(this.client, interaction.channel as TextChannel, interaction.options.getUser("member"), interaction.user);
+            const result = await this.client.mediator.send(manageMemberRoleRequest);
         } catch (error) {
             if (error instanceof CustomError) {
-                throw new CustomError(error.message, error.errorCode, "Create Member");
+                throw new CustomError(error.message, error.errorCode, "Manage Member Role");
             }
-            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Member");
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Manage Member Role");
+
         }
+
     }
 }

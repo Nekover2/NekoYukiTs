@@ -126,9 +126,7 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
     }
 
     async assignRoles(value: CreateMemberRequest) {
-        // Todo:...
-        // get roles as configured in the database
-        // assign roles to the member
+        
     }
 
     async saveToDatabase(value: CreateMemberRequest, member: Member) {

@@ -24,7 +24,7 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
                 if (!currMember)
                     throw new CustomError("Author is not a member", ErrorCode.UserCannotBeFound, this.name);
 
-                let permissionString = currMember.getAllPermissions().map((p) => p.toString()).join(", ");
+                let permissionString = currMember.permissionString().map((p) => p).join(", ");
                 if (permissionString.length === 0) {
                     permissionString = "No permission";
                 }
@@ -36,12 +36,12 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
                     .setFooter({ text: "NekoYuki's manager" })
                     .setTimestamp()
                     .addFields({ name: "Current permissions", value: permissionString });
-                
+
                 // TODO: Add permission select menu
 
                 const permissionLabel = Object.keys(Permission).filter((p) => isNaN(Number(p)));
                 const permissionValue = Object.values(Permission).filter((p) => !isNaN(Number(p)));
-                
+
                 const permissionSelect = new StringSelectMenuBuilder()
                     .setCustomId("permissionSelect")
                     .setPlaceholder("Select a permission")
@@ -54,6 +54,7 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
 
                 const permissionSelectRow = new ActionRowBuilder().addComponents(permissionSelect);
 
+                let permissionSelectInteractionGlobal;
                 // @ts-ignore
                 await permissionDashboardMessage.edit({ content: "", embeds: [permissionDashboardEmbed], components: [permissionSelectRow] });
                 try {
@@ -62,14 +63,19 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
                     const selectedPermission = permissionSelectInteraction.values[0];
                     const permission = parseInt(selectedPermission);
                     if (currMember.hasPermission(permission)) {
+                        await permissionSelectInteraction.reply({ content: `Permission will be removed: ${permissionLabel[permissionValue.indexOf(permission)]}`, ephemeral: true });
                         currMember.removePermission(permission);
                     } else {
+                        await permissionSelectInteraction.reply({ content: `Permission will be added: ${permissionLabel[permissionValue.indexOf(permission)]}`, ephemeral: true });
                         currMember.addPermission(permission);
                     }
+                    permissionSelectInteractionGlobal = permissionSelectInteraction;
                 } catch (error) {
-                    throw new CustomError("Failed to manage member permission", ErrorCode.InternalServerError, "Manage Member Permission");
+                    throw new CustomError("Failed to manage member permission due to inactive", ErrorCode.TimeOut, "Manage Member Permission");
+                } finally {
+                    await permissionDashboardMessage.edit({ content: "", embeds: [permissionDashboardEmbed], components: [] });
                 }
-
+                await permissionSelectInteractionGlobal.deleteReply();
                 try {
                     await value.data.client.dataSources.getRepository(Member).save(currMember);
                 } catch (error) {
@@ -82,11 +88,10 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
                     .setTimestamp()
                     .setFooter({ text: "NekoYuki's manager" });
                 const successMsg = await value.data.channel.send({ embeds: [sucessEmbed] });
-                await delay(5000);
+                await delay(3000);
                 if (successMsg.deletable) {
                     await successMsg.delete();
                 }
-
             } while (true);
         } catch (error) {
             console.error(error);

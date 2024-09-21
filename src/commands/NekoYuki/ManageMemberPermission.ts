@@ -13,7 +13,7 @@ export default class CreateMember extends Command {
     constructor(client: CustomClient) {
         super(client, {
             name: "manage-member-permission",
-            description: "Register a member to the database",
+            description: "Change the permission of a member",
             category: Category.NekoYuki,
             options: [{
                 name: "member",
@@ -32,20 +32,14 @@ export default class CreateMember extends Command {
         try {
             await interaction.deferReply({ ephemeral: true });
             await interaction.deleteReply();
-            // TODO check member permissions
-
-            // TODO check if member is already registered
-
-            // TODO register member
             //@ts-ignore
             const manageMemberPermissionRequest = new ManageMemberPermissionRequest(this.client, interaction.channel as TextChannel, interaction.options.getUser("member"), interaction.user);
             const result = await this.client.mediator.send(manageMemberPermissionRequest);
         } catch (error) {
-            
             if (error instanceof CustomError) {
-                throw new CustomError(error.message, error.errorCode, "Create Member");
+                throw new CustomError(error.message, error.errorCode, "Manage Member Permission");
             }
-            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Member");
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Manage Member Permission");
 
         }
 

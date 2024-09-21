@@ -8,3 +8,14 @@ enum Role {
 }
 
 export default Role;
+
+export class RoleHelper {
+    static getRoleLabel(role: Role): string {
+        const roleValue = Object.values(Role).filter((r) => !isNaN(Number(r)));
+        const roleLabel = Object.keys(Role).filter((r) => isNaN(Number(r)));
+        return roleLabel[roleValue.indexOf(role)]; 
+    }
+    static getRoleString(role: Role[]): string {
+        return role.map((r) => RoleHelper.getRoleLabel(r)).join(", ");
+    }
+}
