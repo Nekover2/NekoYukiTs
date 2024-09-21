@@ -29,6 +29,8 @@ export default class Project implements IProject {
     @Column()
     postChannelId: string = "";
 
+    @Column()
+    wordCount: number = 0;
     
     @OneToMany(() => ProjectMember, projectMember => projectMember.project)
     // @ts-ignore
