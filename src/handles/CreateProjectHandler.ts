@@ -51,16 +51,24 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
             if (!projectName) {
                 throw new CustomError("Project name is required", ErrorCode.BadRequest, "Create Project");
             }
-
             const newProject = new Project();
             newProject.name = projectName;
-
-            // Step 5: save to database
             
-            // Step 4: send prompt to get project information
+            await projectInfoModalInteraction.deferUpdate();
+            // Step 5: save to database
+            try {
+                await value.data.client.dataSources.getRepository(Project).save(newProject);
+            } catch (error) {
+                await projectInfoModalInteraction.editReply({ content: "An error occurred while saving project to database" });
+                if(error instanceof CustomError) {
+                    throw error;
+                }
+                throw new CustomError("An error occurred while saving project to database", ErrorCode.InternalServerError, "Create Project");
+            }
+            await projectInfoModalInteraction.editReply({ content: "Project created sucessfully, navigating to project viewer to view the project..."})
+            // TODO: send request to project viewer to view the project
         } catch (error) {
             console.log(error);
-
             if (error instanceof CustomError) {
                 return value.data.channel.send({ content: error.message });
             }
@@ -104,6 +112,9 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
             }
             return infoInteraction as ButtonInteraction;
         } catch (error) {
+            if(infoMessage.deletable) {
+                await infoMessage.delete();
+            }
             throw new CustomError("Create project request cancelled", ErrorCode.TimeOut, "Create Project");
         }
     }

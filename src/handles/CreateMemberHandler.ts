@@ -29,8 +29,8 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
 
             const newMember = new Member();
             newMember.discordId = value.data.member.id;
-            let infoBtnInteraction = await this.sendInfo(value);
-            infoBtnInteraction = infoBtnInteraction as ButtonInteraction;
+            let infoBtnInteraction : ButtonInteraction = await this.sendInfo(value);
+            
             const gmail = await this.getInformation(infoBtnInteraction as ButtonInteraction);
             newMember.gmail = gmail as string;
 
@@ -41,14 +41,13 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
                 .setColor("Random")
                 .setFooter({ text: "NekoYuki's manager" })
                 .setTimestamp();
-            await infoBtnInteraction.reply({ embeds: [createMemberStatusEmbed] });
+            await infoBtnInteraction.editReply({ embeds: [createMemberStatusEmbed] });
             await this.saveToDatabase(value, newMember);
-
             createMemberStatusEmbed.setDescription(`***Step 1:*** Adding member to the database... Done\n***Step 2:*** Assigning roles...`);
             await infoBtnInteraction.editReply({ embeds: [createMemberStatusEmbed] });
             return newMember;
-
         } catch (error) {
+            console.log(error);
             if (error instanceof CustomError) {
                 throw new CustomError(error.message, error.errorCode, "Create Member");
             } else {
