@@ -7,6 +7,7 @@ import Permission from "../base/NekoYuki/enums/Permission";
 import CreateProjectRequest from "../requests/CreateProjectRequest";
 import Project from "../base/NekoYuki/entities/Project";
 
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export default class CreateProjectHandler implements IMediatorHandle<CreateProjectRequest> {
     name: string;
     constructor() {
@@ -59,13 +60,14 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
             try {
                 await value.data.client.dataSources.getRepository(Project).save(newProject);
             } catch (error) {
-                await projectInfoModalInteraction.editReply({ content: "An error occurred while saving project to database" });
                 if(error instanceof CustomError) {
                     throw error;
                 }
                 throw new CustomError("An error occurred while saving project to database", ErrorCode.InternalServerError, "Create Project");
             }
-            await projectInfoModalInteraction.editReply({ content: "Project created sucessfully, navigating to project viewer to view the project..."})
+            const successMsg = await value.data.channel.send({ content: "Project created sucessfully, navigating to project viewer to view the project..."});
+            await delay(5000);
+            await successMsg.delete();
             // TODO: send request to project viewer to view the project
         } catch (error) {
             console.log(error);
@@ -104,6 +106,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
         try {
             const filter = (interaction: Interaction) => { return interaction.user.id === value.data.author.id; };
             const infoInteraction = await infoMessage.awaitMessageComponent({ filter, time: 60000, componentType: ComponentType.Button });
+            await infoMessage.delete();
             if (!infoInteraction) {
                 throw new CustomError("Create project request cancelled", ErrorCode.TimeOut, "Create Project");
             }

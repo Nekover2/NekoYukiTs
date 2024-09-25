@@ -37,8 +37,6 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
                     .setTimestamp()
                     .addFields({ name: "Current permissions", value: permissionString });
 
-                // TODO: Add permission select menu
-
                 const permissionLabel = Object.keys(Permission).filter((p) => isNaN(Number(p)));
                 const permissionValue = Object.values(Permission).filter((p) => !isNaN(Number(p)));
 

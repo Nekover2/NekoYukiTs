@@ -77,7 +77,6 @@ export default class Member implements IMember {
         return permissions;
     }
     permissionString(): Array<string> {
-        //TODO : Correctly implement this method
         let permissions: Permission[] = this.getAllPermissions();
         let permissionArray: Array<string> = [];
         for (let i = 0; i < permissions.length; i++) {

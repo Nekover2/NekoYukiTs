@@ -2,11 +2,10 @@ import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedB
 import IMediatorHandle from "../base/interfaces/IMediatorHandle";
 import Member from "../base/NekoYuki/entities/Member";
 import CreateMemberRequest from "../requests/CreateMemberRequest";
-import Permission from "../base/NekoYuki/enums/Permission";
-import Error from "../base/classes/CustomError";
 import ErrorCode from "../base/enums/ErrorCode";
 import CustomError from "../base/classes/CustomError";
 
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export default class CreateMemberHandler implements IMediatorHandle<CreateMemberRequest> {
     name: string;
     constructor() {
@@ -43,8 +42,10 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
                 .setTimestamp();
             await infoBtnInteraction.editReply({ embeds: [createMemberStatusEmbed] });
             await this.saveToDatabase(value, newMember);
-            createMemberStatusEmbed.setDescription(`***Step 1:*** Adding member to the database... Done\n***Step 2:*** Assigning roles...`);
-            await infoBtnInteraction.editReply({ embeds: [createMemberStatusEmbed] });
+            createMemberStatusEmbed.setDescription(`***Step 1:*** Adding member to the database... Done\n***Added member to the database***`);
+            await infoBtnInteraction.editReply({ content: "", embeds: [createMemberStatusEmbed], components:[] });
+            await delay(5000);
+            await infoBtnInteraction.deleteReply();
             return newMember;
         } catch (error) {
             console.log(error);
@@ -115,9 +116,12 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
         //@ts-ignore
         getInfoModal.addComponents(getInfoRow);
 
-        const infoModalRequest = await interaction.showModal(getInfoModal);
+        await interaction.showModal(getInfoModal);
         try {
             const infoModalInteraction = await interaction.awaitModalSubmit({ filter: (interaction) => interaction.user.id === interaction.user.id, time: 30000 });
+            await infoModalInteraction.reply({ content: "Information received, processing data...", ephemeral: true });
+            await delay(2000);
+            await infoModalInteraction.deleteReply();
             return infoModalInteraction.fields.getTextInputValue("gmail-input");
         } catch (error) {
             throw new CustomError("Cancelled create member request due to timeout", ErrorCode.UserCancelled, "Create Member");
@@ -125,7 +129,7 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
     }
 
     async assignRoles(value: CreateMemberRequest) {
-        
+        // TODO: Assign needed role to member.
     }
 
     async saveToDatabase(value: CreateMemberRequest, member: Member) {
