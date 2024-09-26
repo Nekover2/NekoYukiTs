@@ -16,8 +16,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
 
     async handle(value: ViewProjectRequest): Promise<any> {
 
-        // TODO: add project viewer after modeling the chapter entity
-
+        // TODO: add navigation buttons
         try {
             const chooseProjectEmbed = new EmbedBuilder()
                 .setTitle("Choose a project")
@@ -98,21 +97,16 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                 .getRepository(Project)
                 .findOne({ 
                     where: { id: Number(targetProjectId) },
-                    relations: ["members"]
+                    relations: ["members", "chapters"]
                 });
-            console.log(project?.members);
             
             if (!project) {
                 throw new CustomError("Project not found", ErrorCode.BadRequest, "View Project");
             }
 
-            let projectOwnerId = project.members.find(m => m.isOwner = true)?.id;
-            if (!projectOwnerId) {
-                throw new CustomError("Project owner not found", ErrorCode.InternalServerError, "View Project");
-            }
 
             let projectDescription = "***Members***\n";
-            projectDescription += `<@${projectOwnerId}> - Owner\n`;
+            projectDescription += `<@${project.ownerId}> - Owner\n`;
 
             project.members.forEach(m => {
                 projectDescription += `<@${m.id}> - ${RoleHelper.getRoleString(m.getAllRoles())}\n`;
@@ -127,9 +121,12 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                     { name: "Last updated", value: project.lastUpdated.toDateString(), inline: true },
                 ]);
             await value.data.channel.send({ embeds: [projectEmbed] });
+
+            // TODO: add navigation buttons
+            // TODO: rebuild project query
+            // TODO: clean messages after done
         } catch (error) {
             console.log(error);
-            
             if (error instanceof CustomError) {
                 throw error;
             }

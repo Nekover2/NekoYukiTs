@@ -12,9 +12,14 @@ export default Permission;
 
 export class PermissionHelper {
     static getPermissionLabel(permission: Permission) : string {
-        return Object.keys(Permission).filter((p) => isNaN(Number(p)))[Object.values(Permission).indexOf(permission)];
+        const permissionValue = Object.values(Permission).filter((p) => !isNaN(Number(p)));
+        const permissionLabel = Object.keys(Permission).filter((p) => isNaN(Number(p)));
+        return permissionLabel[permissionValue.indexOf(permission)];
     }
     static getPermissionString(permission: Permission[]) : string {
+        if(permission.length === 0) {
+            return "No permission";
+        }
         return permission.map((p) => PermissionHelper.getPermissionLabel(p)).join(", ");
     }
 }

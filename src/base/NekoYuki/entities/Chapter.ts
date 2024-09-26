@@ -1,4 +1,4 @@
-import { Column, Entity, JoinTable, OneToMany, OneToOne, PrimaryGeneratedColumn} from "typeorm";
+import { Column, Entity, JoinTable, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn} from "typeorm";
 import IChapter from "../interfaces/IChapter";
 import IProject from "../interfaces/IProject";
 import IProjectMember from "../interfaces/IProjectMember";
@@ -15,7 +15,7 @@ export default class Chapter implements IChapter {
     creationDate: Date = new Date();
     @Column()
     verified: boolean = false;
-    @OneToOne(() => Project, project => project.chapters)
+    @ManyToOne(() => Project, project => project.chapters)
     //@ts-ignore
     project: IProject;
     @OneToMany(() => ProjectMember, projectMember => projectMember.project)

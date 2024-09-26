@@ -9,6 +9,7 @@ import IProjectMember from "../interfaces/IProjectMember";
 import ProjectMember from "./ProjectMember";
 import IChapter from "../interfaces/IChapter";
 import Chapter from "./Chapter";
+
 // TODO: Add builder pattern to this class
 
 @Entity()

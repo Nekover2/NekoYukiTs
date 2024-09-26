@@ -16,6 +16,9 @@ export class RoleHelper {
         return roleLabel[roleValue.indexOf(role)]; 
     }
     static getRoleString(role: Role[]): string {
+        if(role.length === 0) {
+            return "No role";
+        }
         return role.map((r) => RoleHelper.getRoleLabel(r)).join(", ");
     }
 }

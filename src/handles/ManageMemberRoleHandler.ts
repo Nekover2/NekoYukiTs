@@ -77,10 +77,10 @@ export default class ManageMemberRoleHandler implements IMediatorHandle<ManageMe
                 const selectedRole = roleSelectInteractionGlobal.values[0];
                 const role = parseInt(selectedRole);
                 if (member.hasRole(role)) {
-                    await roleSelectInteractionGlobal.reply({ content: `Role will be removed: ${roleLabel[roleValue.indexOf(role)]}`, ephemeral: true });
+                    await roleSelectInteractionGlobal.reply({ content: `Role will be removed: ${roleLabel[roleValue.indexOf(role)]}, updating...`, ephemeral: true });
                     member.removeRole(role);
                 } else {
-                    await roleSelectInteractionGlobal.reply({ content: `Role will be added: ${roleLabel[roleValue.indexOf(role)]}`, ephemeral: true });
+                    await roleSelectInteractionGlobal.reply({ content: `Role will be added: ${roleLabel[roleValue.indexOf(role)]}, updating...`, ephemeral: true });
                     member.addRole(role);
                 }
                 await delay(3000);
@@ -89,8 +89,8 @@ export default class ManageMemberRoleHandler implements IMediatorHandle<ManageMe
                 } catch (error) {
                     throw new CustomError("Failed to save member to the database", ErrorCode.InternalServerError, "Manage Member Role");
                 }
-                await roleSelectInteractionGlobal.update({content: "Role has been updated", components: []});
-                await infoMsg.delete();
+                await roleSelectInteractionGlobal.editReply({content: "Role has been updated", components: []});
+                infoMsg.delete();
             } catch (error) {
                 console.log(error);
                 if (error instanceof CustomError) {

@@ -32,6 +32,8 @@ export default class Member implements IMember {
     // @ts-ignore
     joinedProjects: IProjectMember[];
 
+    joinedProjectCount : number = -1;
+
     hasRole(role: Role): boolean {
         if ((this.roles & role) === role) {
             return true;
