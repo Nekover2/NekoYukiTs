@@ -33,7 +33,6 @@ export default class ManageMemberRoleHandler implements IMediatorHandle<ManageMe
                 if (!member)
                     throw new CustomError("Member is not registered", ErrorCode.UserCannotBeFound, "Manage Member Role");
                 
-                console.log(member.getAllRoles());
                 
                 let roleString = RoleHelper.getRoleString(member.getAllRoles());
                 if (roleString.length === 0) {

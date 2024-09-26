@@ -7,6 +7,8 @@ import IMember from "../interfaces/IMember";
 import IProject from "../interfaces/IProject";
 import IProjectMember from "../interfaces/IProjectMember";
 import ProjectMember from "./ProjectMember";
+import IChapter from "../interfaces/IChapter";
+import Chapter from "./Chapter";
 // TODO: Add builder pattern to this class
 
 @Entity()
@@ -25,6 +27,8 @@ export default class Project implements IProject {
 
     @Column()
     status: ProjectStatus = ProjectStatus.InProgress;
+    @Column()
+    ownerId: string = "";
 
     @Column()
     postChannelId: string = "";
@@ -36,6 +40,9 @@ export default class Project implements IProject {
     // @ts-ignore
     members: IProjectMember[];
 
+    @OneToMany(() => Chapter, chapter => chapter.project)
+    //@ts-ignore
+    chapters: IChapter[]
     addMember(member: IMember, roles: Role[], permissions: Permission[]): IProjectMember | undefined {
         // find the member in the members array
         const oldMember = this.members.find((m) => m.member.discordId === member.discordId);

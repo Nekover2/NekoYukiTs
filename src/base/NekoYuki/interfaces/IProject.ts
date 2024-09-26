@@ -9,6 +9,7 @@ export default interface IProject {
     lastUpdated : Date;
     creationDate : Date;
     status : ProjectStatus;
+    ownerId : string;
     postChannelId? : string;
     members : IProjectMember[];
 

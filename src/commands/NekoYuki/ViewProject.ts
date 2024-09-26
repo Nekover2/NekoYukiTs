@@ -1,0 +1,38 @@
+import { ChatInputCommandInteraction, PermissionsBitField, TextChannel } from "discord.js";
+import Command from "../../base/classes/Command";
+import CustomClient from "../../base/classes/CustomClient";
+import Category from "../../base/enums/Category";
+import ICustomClient from "../../base/interfaces/ICustomClient";
+import CustomError from "../../base/classes/CustomError";
+import ErrorCode from "../../base/enums/ErrorCode";
+import ViewProjectRequest from "../../requests/ViewProjectRequest";
+
+export default class ViewProject extends Command {
+
+    constructor(client: CustomClient) {
+        super(client, {
+            name: "view-project",
+            description: "View a project",
+            category: Category.NekoYuki,
+            options: [],
+            defaultMemberPermissions: PermissionsBitField.Flags.UseApplicationCommands,
+            dmPermissions: false,
+            cooldown: 0,
+            guildId: "-1"
+        });
+    }
+    async Execute(interaction: ChatInputCommandInteraction): Promise<void> {
+        try {
+            await interaction.deferReply({ ephemeral: true });
+            await interaction.deleteReply();
+
+            const author = interaction.user;
+            await this.client.mediator.send(new ViewProjectRequest(this.client, interaction.channel as TextChannel, author));
+        } catch (error) {
+            if(error instanceof CustomError) {
+                throw new CustomError(error.message, error.errorCode, "View Project");
+            }
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "View Project");
+        }
+    }
+}
