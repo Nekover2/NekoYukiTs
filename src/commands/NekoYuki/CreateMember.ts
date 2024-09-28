@@ -36,9 +36,9 @@ export default class CreateMember extends Command {
             const result = await this.client.mediator.send(createMemberRequest);
         } catch (error) {
             if (error instanceof CustomError) {
-                throw new CustomError(error.message, error.errorCode, "Create Member");
+                throw error;
             }
-            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Member");
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Member", error as Error);
         }
     }
 }

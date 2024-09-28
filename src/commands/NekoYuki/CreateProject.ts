@@ -30,7 +30,7 @@ export default class CreateProject extends Command {
             if(error instanceof CustomError) {
                 throw error;
             }
-            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Project");
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Project", error as Error);
         }
     }
 }

@@ -6,7 +6,10 @@ import Project from "../base/NekoYuki/entities/Project";
 import ViewProjectRequest from "../requests/ViewProjectRequest";
 import { ActionRowBuilder, ButtonBuilder, SelectMenuBuilder } from "@discordjs/builders";
 import { RoleHelper } from "../base/NekoYuki/enums/Role";
+import CreateChapterRequest from "../requests/CreateChapterRequest";
+import Member from "../base/NekoYuki/entities/Member";
 
+// TODO: Change global error handling...
 export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRequest> {
     name: string;
 
@@ -15,9 +18,10 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
     }
 
     async handle(value: ViewProjectRequest): Promise<any> {
-
         // TODO: add navigation buttons
         try {
+            const yukiMember = await value.data.client.dataSources.getRepository(Member).findOne({ where: { discordId: value.data.author.id } });
+            if(!yukiMember) throw new CustomError("You are not a member of NekoYuki", ErrorCode.BadRequest, "View Project");
             const chooseProjectEmbed = new EmbedBuilder()
                 .setTitle("Choose a project")
                 .setTimestamp()
@@ -81,17 +85,18 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                         }
                     } else if (interaction.isStringSelectMenu()) {
                         targetProjectId = interaction.values[0];
+                        await chooseProjectMsg.delete();
                         break;
                     }
                     await chooseProjectMsg.delete();
                 } catch (error) {
-                    throw new CustomError("You didn't choose a project in time", ErrorCode.BadRequest, "View Project");
+                    throw new CustomError("You didn't choose a project in time", ErrorCode.BadRequest, "View Project", error as Error);
                 }
             }
             if (targetProjectId === "-1") {
                 throw new CustomError("You didn't choose a project", ErrorCode.BadRequest, "View Project");
             }
-
+            
             // find project in array
             let project = await value.data.client.dataSources
                 .getRepository(Project)
@@ -120,17 +125,37 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                     { name: "Number of chapters", value: project.chapters.length.toString(), inline: true },
                     { name: "Last updated", value: project.lastUpdated.toDateString(), inline: true },
                 ]);
-            await value.data.channel.send({ embeds: [projectEmbed] });
 
+            // TODO: Add navigation btns
+
+            const createChapterBtn = new ButtonBuilder()
+                .setCustomId("createChapter")
+                .setLabel("Create chapter")
+                .setStyle(ButtonStyle.Primary);
+            const editRow = new ActionRowBuilder()
+                .addComponents(createChapterBtn); 
+            // @ts-ignore   
+            const projectInfoMsg = await value.data.channel.send({ embeds: [projectEmbed], components: [editRow] });
+
+            try {
+                const projectInteraction = await projectInfoMsg.awaitMessageComponent({ filter: (interaction) => interaction.user.id === value.data.author.id, time: 60000, componentType: ComponentType.Button });
+                projectInfoMsg.delete();
+                if(projectInteraction.customId === "createChapter") {
+                    const createChapterRequest = new CreateChapterRequest(value.data.client, value.data.channel, yukiMember, project)
+                    await value.data.client.mediator.send(createChapterRequest);
+                } 
+            } catch (error) {
+                throw new CustomError("Time out", ErrorCode.UserCancelled, "View Project", error as Error);
+            }
             // TODO: add navigation buttons
             // TODO: rebuild project query
             // TODO: clean messages after done
         } catch (error) {
-            console.log(error);
+            
             if (error instanceof CustomError) {
                 throw error;
             }
-            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "View Project");
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "View Project", error as Error);
         }
     }
 }

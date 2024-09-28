@@ -55,7 +55,7 @@ export default class CommandHandler extends Event {
             const subCommand = `${interaction.commandName}${subCommandGroup ? `.${subCommandGroup}` : ""}.${interaction.options.getSubcommand(false)}`;
             await this.client.subCommands.get(subCommand)?.Execute(interaction) || await command.Execute(interaction);
         } catch (error) {
-            console.error("Error catched ");
+            console.error(error);
             if (error instanceof CustomError) {
                 const currentChannel = interaction.channel as TextChannel;
                 const errorEmbed = new EmbedBuilder()
@@ -72,7 +72,6 @@ export default class CommandHandler extends Event {
                 }
                 return;
             }
-            console.error(error);
             if (!interaction.channel) return;
             const errorEmbed = new EmbedBuilder()
                 .setTimestamp()

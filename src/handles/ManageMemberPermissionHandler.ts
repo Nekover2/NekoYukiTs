@@ -69,7 +69,7 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
                     }
                     permissionSelectInteractionGlobal = permissionSelectInteraction;
                 } catch (error) {
-                    throw new CustomError("Failed to manage member permission due to inactive", ErrorCode.TimeOut, "Manage Member Permission");
+                    throw new CustomError("Failed to manage member permission due to inactive", ErrorCode.TimeOut, "Manage Member Permission", error as Error);
                 } finally {
                     await permissionDashboardMessage.edit({ content: "", embeds: [permissionDashboardEmbed], components: [] });
                 }
@@ -77,7 +77,7 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
                 try {
                     await value.data.client.dataSources.getRepository(Member).save(currMember);
                 } catch (error) {
-                    throw new CustomError("Failed to save member to the database", ErrorCode.InternalServerError, "Manage Member Permission");
+                    throw new CustomError("Failed to save member to the database", ErrorCode.InternalServerError, "Manage Member Permission", error as Error);
                 }
                 const sucessEmbed = new EmbedBuilder()
                     .setTitle("Success")
@@ -92,7 +92,7 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
                 }
             } while (true);
         } catch (error) {
-            console.error(error);
+            
             if (error instanceof CustomError) {
                 throw error;
             }

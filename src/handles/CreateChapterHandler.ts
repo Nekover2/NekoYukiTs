@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ComponentType, EmbedBuilder, Message, ModalBuilder, TextInputBuilder } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ComponentType, EmbedBuilder, Message, ModalBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
 import CustomError from "../base/classes/CustomError";
 import ErrorCode from "../base/enums/ErrorCode";
 import IMediatorHandle from "../base/interfaces/IMediatorHandle";
@@ -36,11 +36,11 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
             await this.saveChapter(value, currProject, chapterInfo);
             return;
         } catch (error) {
-            console.error(error);
+            
             if (error instanceof CustomError) {
                 throw error;
             }
-            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Chapter");
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Chapter", error as Error);
         } finally {
             sentMsgs.forEach(async msg => {
                 await msg.delete();
@@ -66,13 +66,17 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
                 .setCustomId("cancel")
                 .setLabel("Cancel")
                 .setStyle(ButtonStyle.Danger);
+            
+            const actionRow = new ActionRowBuilder()
+                .addComponents(acceptBtn, cancelBtn);
 
             // @ts-ignore
-            const infoMsg = await value.data.channel.send({ embeds: [infoEmbed], components: [acceptBtn, cancelBtn] });
+            const infoMsg = await value.data.channel.send({ embeds: [infoEmbed], components: [actionRow] });
             sentMsgs.push(infoMsg);
             try {
                 const infoMessageInteraction = await infoMsg.awaitMessageComponent({ filter: i => i.user.id === value.data.author.discordId, time: 60000, componentType: ComponentType.Button});
                 infoMsg.delete();
+                sentMsgs.pop();
                 if (infoMessageInteraction.customId === "cancel") {
                     await infoMessageInteraction.update({ content: "Cancelled", components: [] });
                     return undefined;
@@ -82,13 +86,15 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
                 if (error instanceof CustomError) {
                     throw error;
                 }
-                throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Chapter");
+                throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Chapter", error as Error);
             }
         } catch (error) {
+            
+            
             if (error instanceof CustomError) {
                 throw error;
             }
-            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Chapter");
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Chapter",error as Error);
         }
     }
 
@@ -101,10 +107,11 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
                 .setCustomId("chapter-name")
                 .setPlaceholder("Chapter Name")
                 .setLabel("Chapter Name")
+                .setStyle(TextInputStyle.Short)
                 .setRequired(true);
-            const chapterNameRow = new ActionRowBuilder().addComponents([chapterNameInput]);    
+            const chapterNameRow = new ActionRowBuilder().addComponents(chapterNameInput);    
             // @ts-ignore
-            getInfoModal.addComponents([chapterNameRow]);
+            getInfoModal.addComponents(chapterNameRow);
             await interaction.showModal(getInfoModal);
 
             try {
@@ -118,13 +125,13 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
                 if (error instanceof CustomError) {
                     throw error;
                 }
-                throw new CustomError("Time out", ErrorCode.UserCancelled, "Create Chapter");
+                throw new CustomError("Time out", ErrorCode.UserCancelled, "Create Chapter", error as Error);
             }
         } catch (error) {
             if (error instanceof CustomError) {
                 throw error;
             }
-            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Chapter");
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Chapter",error as Error);
         }
     }
 
@@ -158,8 +165,8 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
             await delay(2000);
             return true;
         } catch (error) {
-            console.error(error);
-            throw new CustomError("Cannot save chapter to database, please try again later...", ErrorCode.InternalServerError, "Create Chapter");
+            
+            throw new CustomError("Cannot save chapter to database, please try again later...", ErrorCode.InternalServerError, "Create Chapter", error as Error);
         }
     }
 }

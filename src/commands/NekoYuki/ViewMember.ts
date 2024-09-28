@@ -36,7 +36,7 @@ export default class ViewMember extends Command {
             if (error instanceof CustomError) {
                 throw error;
             }
-            throw new CustomError("An ***unknown*** error when receiving interaction", ErrorCode.Forbidden, "view-member");
+            throw new CustomError("An ***unknown*** error when receiving interaction", ErrorCode.Forbidden, "view-member",error as Error);
         }
     }
 }

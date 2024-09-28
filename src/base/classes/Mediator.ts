@@ -72,12 +72,10 @@ export default class Mediator implements IMediator {
             }
             throw new CustomError(`Handle ${request.name} not found`, ErrorCode.BadRequest, "Mediator");
         } catch (error) {
-            console.log("Error catched ");
-            
             if (error instanceof CustomError) {
-                throw new CustomError(error.message, error.errorCode, "Mediator");
+                throw error
             }
-            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Mediator");
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Mediator", error as Error);
         }
 
     }

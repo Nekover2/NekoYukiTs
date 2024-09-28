@@ -30,9 +30,9 @@ export default class ViewProject extends Command {
             await this.client.mediator.send(new ViewProjectRequest(this.client, interaction.channel as TextChannel, author));
         } catch (error) {
             if(error instanceof CustomError) {
-                throw new CustomError(error.message, error.errorCode, "View Project");
+                throw error;
             }
-            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "View Project");
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "View Project", error as Error);
         }
     }
 }

@@ -37,9 +37,9 @@ export default class CreateMember extends Command {
             const result = await this.client.mediator.send(manageMemberRoleRequest);
         } catch (error) {
             if (error instanceof CustomError) {
-                throw new CustomError(error.message, error.errorCode, "Manage Member Role");
+                throw error;
             }
-            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Manage Member Role");
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Manage Member Role", error as Error);
 
         }
 

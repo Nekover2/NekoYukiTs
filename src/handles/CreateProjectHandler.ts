@@ -80,7 +80,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
             await delay(5000);
             // TODO: send request to project viewer to view the project
         } catch (error) {
-            console.log(error);
+            
             if (error instanceof CustomError) {
                 return value.data.channel.send({ content: error.message });
             }
@@ -126,7 +126,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
             }
             return infoInteraction as ButtonInteraction;
         } catch (error) {
-            throw new CustomError("Create project request cancelled", ErrorCode.TimeOut, "Create Project");
+            throw new CustomError("Create project request cancelled", ErrorCode.TimeOut, "Create Project", error as Error);
         }
     }
 

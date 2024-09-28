@@ -28,7 +28,7 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
             if (error instanceof CustomError) {
                 throw error;
             }
-            throw new CustomError("An ***unknown*** error when receiving interaction", ErrorCode.Forbidden, "view-member");
+            throw new CustomError("An ***unknown*** error when receiving interaction", ErrorCode.Forbidden, "view-member", error as Error);
         } finally {
             sentMsg.forEach(async msg => {
                 if (msg.deletable) {
@@ -81,17 +81,17 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
                 if (error instanceof CustomError) {
                     throw error;
                 }
-                throw new CustomError("Time out", ErrorCode.TimeOut, "view-member");
+                throw new CustomError("Time out", ErrorCode.TimeOut, "view-member", error as Error);
             }
 
             return undefined;
         } catch (error) {
-            console.error(error);
+            
 
             if (error instanceof CustomError) {
                 throw error;
             }
-            throw new CustomError("An ***unknown*** error when receiving interaction", ErrorCode.Forbidden, "view-member");
+            throw new CustomError("An ***unknown*** error when receiving interaction", ErrorCode.Forbidden, "view-member", error as Error);
         } finally {
             await this.clearAllMessages(sentMsg);
         }
@@ -130,7 +130,7 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
 
             // TODO: add navigation buttons
         } catch (error) {
-            console.error(error);
+            
             if (error instanceof CustomError) {
                 throw error;
             }

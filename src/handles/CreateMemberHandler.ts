@@ -48,11 +48,11 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
             await infoBtnInteraction.deleteReply();
             return newMember;
         } catch (error) {
-            console.log(error);
+            
             if (error instanceof CustomError) {
-                throw new CustomError(error.message, error.errorCode, "Create Member");
+                throw error;
             } else {
-                throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Member");
+                throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Member", error as Error);
             }
         }
 
@@ -93,7 +93,7 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
             }
             return infoInteraction as ButtonInteraction;
         } catch (error) {
-            throw new CustomError("Cancelled create member request due to timeout", ErrorCode.UserCancelled, "Create Member");
+            throw new CustomError("Cancelled create member request due to timeout", ErrorCode.UserCancelled, "Create Member", error as Error);
         }
     }
 
@@ -124,7 +124,7 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
             await infoModalInteraction.deleteReply();
             return infoModalInteraction.fields.getTextInputValue("gmail-input");
         } catch (error) {
-            throw new CustomError("Cancelled create member request due to timeout", ErrorCode.UserCancelled, "Create Member");
+            throw new CustomError("Cancelled create member request due to timeout", ErrorCode.UserCancelled, "Create Member", error as Error);
         }
     }
 
@@ -136,7 +136,7 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
         try {
             await value.data.client.dataSources.getRepository(Member).save(member);
         } catch (error) {
-            throw new CustomError("Failed to save member to database", ErrorCode.DatabaseCreateError, "Create Member");
+            throw new CustomError("Failed to save member to database", ErrorCode.DatabaseCreateError, "Create Member", error as Error);
         }
     }
 

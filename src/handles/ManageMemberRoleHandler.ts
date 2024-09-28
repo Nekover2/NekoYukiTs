@@ -71,7 +71,7 @@ export default class ManageMemberRoleHandler implements IMediatorHandle<ManageMe
                     const filter = (interaction : Interaction) => interaction.user.id === value.data.author.id;
                     roleSelectInteractionGlobal = await infoMsg.awaitMessageComponent({ filter, time: 60000, componentType: ComponentType.StringSelect });
                 } catch (error) {
-                    throw new CustomError("No response from author", ErrorCode.TimeOut, "Manage Member Role");
+                    throw new CustomError("No response from author", ErrorCode.TimeOut, "Manage Member Role", error as Error);
                 }
     
                 const selectedRole = roleSelectInteractionGlobal.values[0];
@@ -87,16 +87,16 @@ export default class ManageMemberRoleHandler implements IMediatorHandle<ManageMe
                 try {
                     await value.data.client.dataSources.getRepository(Member).save(member);
                 } catch (error) {
-                    throw new CustomError("Failed to save member to the database", ErrorCode.InternalServerError, "Manage Member Role");
+                    throw new CustomError("Failed to save member to the database", ErrorCode.InternalServerError, "Manage Member Role",error as Error);
                 }
                 await roleSelectInteractionGlobal.editReply({content: "Role has been updated", components: []});
                 infoMsg.delete();
             } catch (error) {
-                console.log(error);
+                
                 if (error instanceof CustomError) {
-                    throw new CustomError(error.message, error.errorCode, "Manage Member Role");
+                    throw error;
                 }
-                throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Manage Member Role");
+                throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Manage Member Role", error as Error);
             }
         } while (true);
     }
