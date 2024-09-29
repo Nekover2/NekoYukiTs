@@ -8,8 +8,10 @@ import CustomError from "../base/classes/CustomError";
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export default class CreateMemberHandler implements IMediatorHandle<CreateMemberRequest> {
     name: string;
+    ableToNavigate: boolean;
     constructor() {
         this.name = "CreateMember";
+        this.ableToNavigate = true;
     }
     async handle(value: CreateMemberRequest): Promise<Member> {
         try {

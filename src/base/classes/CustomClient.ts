@@ -1,4 +1,4 @@
-import { Client, Collection, GatewayIntentBits } from 'discord.js';
+import { ActionRow, ActionRowBuilder, Client, Collection, GatewayIntentBits, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from 'discord.js';
 import IConfig from '../interfaces/IConfig';
 import ICustomClient from '../interfaces/ICustomClient';
 import Handler from './Handler';
@@ -8,6 +8,10 @@ import { DataSource } from 'typeorm';
 import { NekoYukiDataSource } from '../../config/NekoYukiDataSource';
 import Mediator from './Mediator';
 import "reflect-metadata";
+import { glob } from 'glob';
+import path from 'path';
+import IMediatorHandle from '../interfaces/IMediatorHandle';
+import IMediatorRequest from '../interfaces/IMediatorRequest';
 export default class CustomClient extends Client implements ICustomClient{
     config: IConfig;
     handler: Handler;
@@ -16,6 +20,7 @@ export default class CustomClient extends Client implements ICustomClient{
     cooldowns: Collection<string, Collection<string, number>>;
     dataSources: DataSource;
     mediator: Mediator;
+    navigations: ActionRowBuilder;
     constructor(){
         super({
             intents: [
@@ -34,6 +39,7 @@ export default class CustomClient extends Client implements ICustomClient{
         this.dataSources = NekoYukiDataSource
         this.mediator = new Mediator();
         this.mediator.LoadMediator(`build/requests/**/*.js`, `build/handles/**/*.js`);
+        this.navigations = new ActionRowBuilder();
     }
     Init = async () => {
         await this.dataSources.initialize();
@@ -42,10 +48,29 @@ export default class CustomClient extends Client implements ICustomClient{
             .catch((err) => {
                 console.error(err);
             });
+        await this.LoadNavigation(`build/handles/**/*.js`);
     }
 
     LoadHandlers = () : void => {
         this.handler.LoadEvents();
         this.handler.LoadCommands();
+    }
+
+    LoadNavigation = async (handlerPath: string) : Promise<void> => {
+        const handler = (await glob(handlerPath)).map((file) => path.resolve(file));
+        const navigationRow = new StringSelectMenuBuilder()
+            .setCustomId("navigationSelect")
+            .setPlaceholder("Select a navigation");
+        handler.map(async (file: string) => {
+            const navigation: IMediatorHandle<IMediatorRequest> = new (await import(file)).default(this);
+            if(navigation.ableToNavigate === true) {
+                const selectMenu = new StringSelectMenuOptionBuilder()
+                    .setLabel(navigation.name)
+                    .setValue(navigation.name);
+                navigationRow.addOptions(selectMenu);
+            }
+            return delete require.cache[require.resolve(file)];
+        });
+        this.navigations.addComponents(navigationRow);
     }
 }

@@ -1,6 +1,7 @@
-import { Guild, TextChannel, User } from "discord.js";
+import { Guild, Interaction, TextChannel, User } from "discord.js";
 import CustomClient from "../base/classes/CustomClient";
 import IMediatorRequest from "../base/interfaces/IMediatorRequest";
+import ICustomClient from "../base/interfaces/ICustomClient";
 
 export default class ViewMemberRequest implements IMediatorRequest{
     name: string;
@@ -9,6 +10,9 @@ export default class ViewMemberRequest implements IMediatorRequest{
     constructor(client: CustomClient, Guild: Guild, channel : TextChannel, author: User, member?: User) {
         this.name = "ViewMember";
         this.data = new ViewMemberRequestOptions(client, Guild, channel, author, member);
+    }
+    fromInteraction(customClient: ICustomClient, interaction: Interaction): IMediatorRequest {
+        throw new Error("Method not implemented.");
     }
 }
 

@@ -9,8 +9,10 @@ import { PermissionHelper } from "../base/NekoYuki/enums/Permission";
 
 export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequest> {
     name: string;
+    ableToNavigate: boolean;
     constructor() {
         this.name = "ViewMember";
+        this.ableToNavigate = true;
     }
 
     async handle(value: ViewMemberRequest): Promise<any> {
@@ -86,8 +88,6 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
 
             return undefined;
         } catch (error) {
-            
-
             if (error instanceof CustomError) {
                 throw error;
             }

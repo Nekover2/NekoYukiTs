@@ -9,8 +9,10 @@ import ManageMemberRoleRequest from "../requests/ManageMemberRoleRequest";
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export default class ManageMemberRoleHandler implements IMediatorHandle<ManageMemberRoleRequest> {
     name: string;
+    ableToNavigate: boolean;
     constructor() {
         this.name = "ManageMemberRole";
+        this.ableToNavigate = false;
     }
     async handle(value: ManageMemberRoleRequest): Promise<any> {
         do { 

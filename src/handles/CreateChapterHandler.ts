@@ -11,12 +11,15 @@ import Chapter from "../base/NekoYuki/entities/Chapter";
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export default class CreateChapterHandler implements IMediatorHandle<CreateChapterRequest> {
     name: string;
+    ableToNavigate: boolean;
     constructor() {
         this.name = "CreateChapter";
+        this.ableToNavigate = false;
     }
     async handle(value: CreateChapterRequest): Promise<any> {
         const sentMsgs: Array<Message> = [];
         try {
+
             // STEP 1: Check if author has permissions
             let permissionFlag = true;
             const currProject = await value.data.client.dataSources.getRepository(Project).findOne({
@@ -28,6 +31,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
             if (memberPosition?.hasPermission(Permission.UpdateProject)) permissionFlag = true;
             if (value.data.author.hasPermission(Permission.MangeProject)) permissionFlag = true;
             if (!permissionFlag) throw new CustomError("You do not have permission to create a chapter", ErrorCode.Forbidden, "Create Chapter");
+
             // STEP 2: Create a chapter
             const infoInteraction = await this.preSetup(value, currProject, sentMsgs);
             if (!infoInteraction) return;
@@ -36,7 +40,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
             await this.saveChapter(value, currProject, chapterInfo);
             return;
         } catch (error) {
-            
+
             if (error instanceof CustomError) {
                 throw error;
             }
@@ -47,7 +51,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
             });
         }
     }
-    async preSetup(value: CreateChapterRequest, project: IProject, sentMsgs : Array<Message>): Promise<ButtonInteraction | undefined> {
+    async preSetup(value: CreateChapterRequest, project: IProject, sentMsgs: Array<Message>): Promise<ButtonInteraction | undefined> {
         try {
             const infoEmbed = new EmbedBuilder()
                 .setTitle("Before we start...")
@@ -66,7 +70,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
                 .setCustomId("cancel")
                 .setLabel("Cancel")
                 .setStyle(ButtonStyle.Danger);
-            
+
             const actionRow = new ActionRowBuilder()
                 .addComponents(acceptBtn, cancelBtn);
 
@@ -74,7 +78,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
             const infoMsg = await value.data.channel.send({ embeds: [infoEmbed], components: [actionRow] });
             sentMsgs.push(infoMsg);
             try {
-                const infoMessageInteraction = await infoMsg.awaitMessageComponent({ filter: i => i.user.id === value.data.author.discordId, time: 60000, componentType: ComponentType.Button});
+                const infoMessageInteraction = await infoMsg.awaitMessageComponent({ filter: i => i.user.id === value.data.author.discordId, time: 60000, componentType: ComponentType.Button });
                 infoMsg.delete();
                 sentMsgs.pop();
                 if (infoMessageInteraction.customId === "cancel") {
@@ -89,12 +93,12 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
                 throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Chapter", error as Error);
             }
         } catch (error) {
-            
-            
+
+
             if (error instanceof CustomError) {
                 throw error;
             }
-            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Chapter",error as Error);
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Chapter", error as Error);
         }
     }
 
@@ -109,7 +113,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
                 .setLabel("Chapter Name")
                 .setStyle(TextInputStyle.Short)
                 .setRequired(true);
-            const chapterNameRow = new ActionRowBuilder().addComponents(chapterNameInput);    
+            const chapterNameRow = new ActionRowBuilder().addComponents(chapterNameInput);
             // @ts-ignore
             getInfoModal.addComponents(chapterNameRow);
             await interaction.showModal(getInfoModal);
@@ -131,16 +135,16 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
             if (error instanceof CustomError) {
                 throw error;
             }
-            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Chapter",error as Error);
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Chapter", error as Error);
         }
     }
 
-    async saveChapter(value: CreateChapterRequest, project:IProject, chapterInfo : CreateChapterOptions) : Promise<boolean> {
+    async saveChapter(value: CreateChapterRequest, project: IProject, chapterInfo: CreateChapterOptions): Promise<boolean> {
         try {
             const newChapter = new Chapter();
             newChapter.title = chapterInfo.name;
             newChapter.project = project;
-            newChapter.verified = false; 
+            newChapter.verified = false;
             newChapter.creationDate = new Date();
             newChapter.members = project.members;
             const progressEmbed = new EmbedBuilder()
@@ -165,7 +169,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
             await delay(2000);
             return true;
         } catch (error) {
-            
+
             throw new CustomError("Cannot save chapter to database, please try again later...", ErrorCode.InternalServerError, "Create Chapter", error as Error);
         }
     }

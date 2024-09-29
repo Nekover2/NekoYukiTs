@@ -1,4 +1,4 @@
-import { TextChannel, User } from "discord.js";
+import { Interaction, TextChannel, User } from "discord.js";
 import ICustomClient from "../base/interfaces/ICustomClient";
 import IMediatorRequest from "../base/interfaces/IMediatorRequest";
 
@@ -9,6 +9,9 @@ export default class ManageMemberRoleRequest implements IMediatorRequest {
     constructor(client: ICustomClient, channel: TextChannel, member: User, author: User) {
         this.name ="ManageMemberRole"
         this.data = new ManageMemberRoleOptions(client, channel, member, author);
+    }
+    fromInteraction(customClient: ICustomClient, interaction: Interaction): IMediatorRequest {
+        throw new Error("Method not implemented.");
     }
 }
 

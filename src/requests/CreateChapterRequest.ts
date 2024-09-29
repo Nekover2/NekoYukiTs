@@ -1,4 +1,4 @@
-import { TextChannel, User } from "discord.js";
+import { Interaction, TextChannel, User } from "discord.js";
 import ICustomClient from "../base/interfaces/ICustomClient";
 import IMediatorRequest from "../base/interfaces/IMediatorRequest";
 import IProject from "../base/NekoYuki/interfaces/IProject";
@@ -11,6 +11,9 @@ export default class CreateChapterRequest implements IMediatorRequest{
     constructor(client: ICustomClient, channel: TextChannel, author: IMember, project: IProject) {
         this.name = "CreateChapter";
         this.data = new CreateChapterRequestOptions(client, channel, author, project);
+    }
+    fromInteraction(customClient: ICustomClient, interaction: Interaction): IMediatorRequest {
+        throw new Error("Method not implemented.");
     }
 }
 

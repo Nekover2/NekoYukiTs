@@ -1,4 +1,4 @@
-import { Collection } from "discord.js";
+import { ActionRow, ActionRowBuilder, Collection } from "discord.js";
 import IConfig from "./IConfig";
 import ICommand from "./ICommand";
 import ISubCommand from "./ISubCommand";
@@ -12,6 +12,8 @@ export default interface ICustomClient {
     cooldowns : Collection<string, Collection<string, number>>;
     dataSources : DataSource;
     mediator : IMediator;
+    navigations : ActionRowBuilder;
     Init : () => void;
     LoadHandlers : () => void;
+    LoadNavigation : (handlerPath: string) => void;
 }

@@ -8,20 +8,23 @@ import { ActionRowBuilder, ButtonBuilder, SelectMenuBuilder } from "@discordjs/b
 import { RoleHelper } from "../base/NekoYuki/enums/Role";
 import CreateChapterRequest from "../requests/CreateChapterRequest";
 import Member from "../base/NekoYuki/entities/Member";
+import Permission from "../base/NekoYuki/enums/Permission";
 
 // TODO: Change global error handling...
 export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRequest> {
     name: string;
+    ableToNavigate: boolean;
 
     constructor() {
         this.name = "ViewProject";
+        this.ableToNavigate = true;
     }
 
     async handle(value: ViewProjectRequest): Promise<any> {
         // TODO: add navigation buttons
         try {
             const yukiMember = await value.data.client.dataSources.getRepository(Member).findOne({ where: { discordId: value.data.author.id } });
-            if(!yukiMember) throw new CustomError("You are not a member of NekoYuki", ErrorCode.BadRequest, "View Project");
+            if (!yukiMember) throw new CustomError("You are not a member of NekoYuki", ErrorCode.BadRequest, "View Project");
             const chooseProjectEmbed = new EmbedBuilder()
                 .setTitle("Choose a project")
                 .setTimestamp()
@@ -96,25 +99,25 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             if (targetProjectId === "-1") {
                 throw new CustomError("You didn't choose a project", ErrorCode.BadRequest, "View Project");
             }
-            
+
             // find project in array
             let project = await value.data.client.dataSources
                 .getRepository(Project)
-                .findOne({ 
+                .findOne({
                     where: { id: Number(targetProjectId) },
                     relations: ["members", "chapters"]
                 });
-            
+
             if (!project) {
                 throw new CustomError("Project not found", ErrorCode.BadRequest, "View Project");
             }
 
 
-            let projectDescription = "***Members***\n";
-            projectDescription += `<@${project.ownerId}> - Owner\n`;
-
+            let projectDescription = "***OWNER***\n";
+            projectDescription += `**<@${project.ownerId}>\n**`;
+            projectDescription += `------Members------\n`;
             project.members.forEach(m => {
-                projectDescription += `<@${m.id}> - ${RoleHelper.getRoleString(m.getAllRoles())}\n`;
+                projectDescription += `- <@${m.id}> - ${RoleHelper.getRoleString(m.getAllRoles())}\n`;
             });
             const projectEmbed = new EmbedBuilder()
                 .setAuthor({ name: value.data.author.username, iconURL: value.data.author.displayAvatarURL() })
@@ -127,23 +130,75 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                 ]);
 
             // TODO: Add navigation btns
+            let hasProjectPermission = false;
+            let hasAdvancedProjectPermission = false;
 
+            if (yukiMember.discordId == project.ownerId) {
+                hasProjectPermission = true;
+                hasAdvancedProjectPermission = true;
+            }
+            if (yukiMember.hasPermission(Permission.MangeProject)) {
+                hasProjectPermission = true;
+                hasAdvancedProjectPermission = true;
+            }
+            if (yukiMember.hasPermission(Permission.UpdateProject)) hasProjectPermission = true;
+            if (project.members.find(m => m.member.discordId === yukiMember.discordId)) hasProjectPermission = true;
+
+
+
+            const contextRows = [];
             const createChapterBtn = new ButtonBuilder()
                 .setCustomId("createChapter")
                 .setLabel("Create chapter")
                 .setStyle(ButtonStyle.Primary);
+            const editProjectBtn = new ButtonBuilder()
+                .setCustomId("editProject")
+                .setLabel("Edit project")
+                .setStyle(ButtonStyle.Primary);
+            const manageMemberBtn = new ButtonBuilder()
+                .setCustomId("manageMember")
+                .setLabel("Manage member")
+                .setStyle(ButtonStyle.Primary);
+            const viewChapterBtn = new ButtonBuilder()
+                .setCustomId("viewChapter")
+                .setLabel("View chapter")
+                .setStyle(ButtonStyle.Success);
+            const deleteProjectBtn = new ButtonBuilder()
+                .setCustomId("deleteProject")
+                .setLabel("Delete project")
+                .setStyle(ButtonStyle.Danger);
             const editRow = new ActionRowBuilder()
-                .addComponents(createChapterBtn); 
+                .addComponents(viewChapterBtn);
+
+            if (hasProjectPermission) {
+                editRow.addComponents(createChapterBtn, editProjectBtn, manageMemberBtn);
+            }
+            if (hasAdvancedProjectPermission) {
+                editRow.addComponents(deleteProjectBtn);
+            }
+            contextRows.push(editRow);
+            contextRows.push(value.data.client.navigations);
             // @ts-ignore   
-            const projectInfoMsg = await value.data.channel.send({ embeds: [projectEmbed], components: [editRow] });
+            const projectInfoMsg = await value.data.channel.send({ embeds: [projectEmbed], components: contextRows });
 
             try {
-                const projectInteraction = await projectInfoMsg.awaitMessageComponent({ filter: (interaction) => interaction.user.id === value.data.author.id, time: 60000, componentType: ComponentType.Button });
+                const projectInteraction = await projectInfoMsg.awaitMessageComponent({ filter: (interaction) => interaction.user.id === value.data.author.id, time: 60000 });
                 projectInfoMsg.delete();
-                if(projectInteraction.customId === "createChapter") {
-                    const createChapterRequest = new CreateChapterRequest(value.data.client, value.data.channel, yukiMember, project)
-                    await value.data.client.mediator.send(createChapterRequest);
-                } 
+                if (projectInteraction.isButton()) {
+                    switch (projectInteraction.customId) {
+                        case "createChapter":
+                            const createChapterRequest = new CreateChapterRequest(value.data.client, value.data.channel, yukiMember, project)
+                            await value.data.client.mediator.send(createChapterRequest);
+                            break;
+
+                        default:
+                            break;
+                    }
+                }
+                if(projectInteraction.isStringSelectMenu()){
+                    
+                }
+
             } catch (error) {
                 throw new CustomError("Time out", ErrorCode.UserCancelled, "View Project", error as Error);
             }
@@ -151,7 +206,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             // TODO: rebuild project query
             // TODO: clean messages after done
         } catch (error) {
-            
+
             if (error instanceof CustomError) {
                 throw error;
             }

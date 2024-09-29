@@ -10,8 +10,10 @@ const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 export default class ManageMemberPermissionHandler implements IMediatorHandle<ManageMemberPermissionRequest> {
     name: string;
+    ableToNavigate: boolean;
     constructor() {
         this.name = "ManageMemberPermission";
+        this.ableToNavigate = false;
     }
 
     async handle(value: ManageMemberPermissionRequest): Promise<any> {

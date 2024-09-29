@@ -12,8 +12,10 @@ import Role, { RoleHelper } from "../base/NekoYuki/enums/Role";
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export default class CreateProjectHandler implements IMediatorHandle<CreateProjectRequest> {
     name: string;
+    ableToNavigate: boolean;
     constructor() {
         this.name = "CreateProject";
+        this.ableToNavigate = true;
     }
     async handle(value: CreateProjectRequest): Promise<any> {
         try {
