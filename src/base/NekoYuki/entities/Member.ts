@@ -37,7 +37,7 @@ export default class Member implements IMember {
 
     @OneToMany(() => GeneralMemerRole, generalMemerRole => generalMemerRole.member)
     // @ts-ignore
-    generalMemerRole : IGeneralRole[];
+    generalMemberRole : GeneralRole[];
 
     joinedProjectCount : number = -1;
 

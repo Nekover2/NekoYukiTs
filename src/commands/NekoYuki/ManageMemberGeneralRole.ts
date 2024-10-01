@@ -6,13 +6,14 @@ import CustomError from "../../base/classes/CustomError";
 import ErrorCode from "../../base/enums/ErrorCode";
 import ManageMemberPermissionRequest from "../../requests/ManageMemberPermissionRequest";
 import ManageMemberRoleRequest from "../../requests/ManageMemberRoleRequest";
+import ManageMemberGeneralRoleRequest from "../../requests/ManageMemberGeneralRoleRequest";
 
 
 export default class CreateMember extends Command {
     constructor(client: CustomClient) {
         super(client, {
-            name: "manage-member-role",
-            description: "Update role of a member", 
+            name: "manage-member-general-role",
+            description: "Update general role of a member", 
             category: Category.NekoYuki,
             options: [{
                 name: "member",
@@ -32,8 +33,7 @@ export default class CreateMember extends Command {
             await interaction.deferReply({ ephemeral: true });
             await interaction.deleteReply();
             //@ts-ignore
-            const manageMemberRoleRequest = new ManageMemberRoleRequest(this.client, interaction.channel as TextChannel, interaction.options.getUser("member"), interaction.user);
-            const result = await this.client.mediator.send(manageMemberRoleRequest);
+            const result = await this.client.mediator.send(new ManageMemberGeneralRoleRequest({customClient: this.client, interaction: interaction, member: interaction.options.getUser("member")}));
         } catch (error) {
             if (error instanceof CustomError) {
                 throw error;

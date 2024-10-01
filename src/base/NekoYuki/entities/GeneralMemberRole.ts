@@ -7,7 +7,7 @@ export default class GeneralMemerRole {
     @PrimaryGeneratedColumn()
     // @ts-ignore
     id: number;
-    @ManyToOne(() => Member, member => member.generalMemerRole)
+    @ManyToOne(() => Member, member => member.generalMemberRole)
     // @ts-ignore
     member: Member;
     @ManyToOne(() => GeneralRole, generalRole => generalRole.Members)
