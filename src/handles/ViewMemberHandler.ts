@@ -4,7 +4,7 @@ import ViewMemberRequest from "../requests/ViewMemberRequest";
 import ErrorCode from "../base/enums/ErrorCode";
 import CustomError from "../base/classes/CustomError";
 import Member from "../base/NekoYuki/entities/Member";
-import { RoleHelper } from "../base/NekoYuki/enums/Role";
+import { PositionHelper } from "../base/NekoYuki/enums/Position";
 import { PermissionHelper } from "../base/NekoYuki/enums/Permission";
 
 export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequest> {
@@ -107,10 +107,6 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
             if (!yukiMember) {
                 throw new CustomError("Member is not registered", ErrorCode.UserCannotBeFound, "view-member");
             }
-            console.log(yukiMember);
-            console.log(RoleHelper.getRoleString(yukiMember.getAllRoles()));
-            console.log(PermissionHelper.getPermissionString(yukiMember.getAllPermissions()));
-
             const memberEmbed = new EmbedBuilder()
                 .setAuthor({ name: member.username, iconURL: member.displayAvatarURL() })
                 .setColor("Blue")
@@ -121,7 +117,7 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
                     { name: "Projects", value: yukiMember.joinedProjectCount.toString(), inline: true },
                     { name: "Join date", value: yukiMember.joinDate.toDateString(), inline: true },
                     { name: "Gmail", value: yukiMember.gmail, inline: false },
-                    { name: "Roles", value: RoleHelper.getRoleString(yukiMember.getAllRoles()), inline: false },
+                    { name: "Positions", value: yukiMember.allRoleString(), inline: false },
                     { name: "Permissions", value: PermissionHelper.getPermissionString(yukiMember.getAllPermissions()), inline: false },
                 ])
                 .setFooter({ text: "Powered by NekoYuki" })

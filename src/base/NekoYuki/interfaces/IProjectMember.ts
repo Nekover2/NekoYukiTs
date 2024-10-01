@@ -1,6 +1,6 @@
 import MemberStatus from "../enums/MemberStatus";
 import Permission from "../enums/Permission";
-import Role from "../enums/Role";
+import Position from "../enums/Position";
 import IMember from "./IMember";
 import IProject from "./IProject";
 
@@ -16,16 +16,16 @@ export default interface IProjectMember {
     isOwner : boolean;
 
     // Methods
-    hasRole(role : Role)  : boolean;
+    hasRole(role : Position)  : boolean;
     hasPermission(permission : Permission) : boolean;
 
-    addRole(role : Role) : void;
-    removeRole(role : Role) : void;
+    addPosition(role : Position) : void;
+    removePosition(role : Position) : void;
     
     addPermission(permission : Permission) : void;
     removePermission(permission : Permission) : void;
 
-    getAllRoles() : Role[];
+    getAllPositions() : Position[];
     getAllPermissions() : Permission[];
     permissionString() : string;
 

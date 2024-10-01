@@ -2,7 +2,7 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import MemberStatus from "../enums/MemberStatus";
 import Permission from "../enums/Permission";
 import ProjectStatus from "../enums/ProjectStatus";
-import Role from "../enums/Role";
+import Position from "../enums/Position";
 import IMember from "../interfaces/IMember";
 import IProject from "../interfaces/IProject";
 import IProjectMember from "../interfaces/IProjectMember";
@@ -44,7 +44,7 @@ export default class Project implements IProject {
     @OneToMany(() => Chapter, chapter => chapter.project)
     //@ts-ignore
     chapters: IChapter[]
-    addMember(member: IMember, roles: Role[], permissions: Permission[]): IProjectMember | undefined {
+    addMember(member: IMember, roles: Position[], permissions: Permission[]): IProjectMember | undefined {
         // find the member in the members array
         const oldMember = this.members.find((m) => m.member.discordId === member.discordId);
         if (oldMember) {
@@ -61,7 +61,7 @@ export default class Project implements IProject {
 
 
         roles.forEach((role) => {
-            newMember.addRole(role);
+            newMember.addPosition(role);
         });
         permissions.forEach((permission) => {
             newMember.addPermission(permission);
@@ -89,7 +89,7 @@ export default class Project implements IProject {
         }
         return false;
     }
-    hasProjectRole(member: IMember, role: Role): boolean {
+    hasProjectRole(member: IMember, role: Position): boolean {
         if(member.hasRole(role)){
             return true;
         }
@@ -98,18 +98,18 @@ export default class Project implements IProject {
         }
         return false;
     }
-    addRole(member: IMember, role: Role): void {
+    addPosition(member: IMember, role: Position): void {
         const projectMember = this.members.find((m) => m.member.discordId === member.discordId);
         if(projectMember){
             if(!projectMember.hasRole(role))
-                projectMember.addRole(role);
+                projectMember.addPosition(role);
         }
     }
-    removeRole(member: IMember, role: Role): void {
+    removePosition(member: IMember, role: Position): void {
         const projectMember = this.members.find((m) => m.member.discordId === member.discordId);
         if(projectMember){
             if(projectMember.hasRole(role))
-                projectMember.removeRole(role);
+                projectMember.removePosition(role);
         }
     }
     addPermission(member: IMember, permission: Permission): void {
@@ -126,14 +126,14 @@ export default class Project implements IProject {
                 projectMember.removePermission(permission);
         }
     }
-    getAllRoles(member: IMember): Role[] {
-        let roles: Role[] = [];
+    getAllPositions(member: IMember): Position[] {
+        let roles: Position[] = [];
         const projectMember = this.members.find((m) => m.member.discordId === member.discordId);
         if(projectMember) {
-            let enumValues = Object.values(Role);
+            let enumValues = Object.values(Position);
             for(let i = 0; i < enumValues.length; i++){
-                if(projectMember.hasRole(enumValues[i] as Role)){
-                    roles.push(enumValues[i] as Role);
+                if(projectMember.hasRole(enumValues[i] as Position)){
+                    roles.push(enumValues[i] as Position);
                 }
             }
         }

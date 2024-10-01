@@ -4,17 +4,17 @@ import ErrorCode from "../base/enums/ErrorCode";
 import IMediatorHandle from "../base/interfaces/IMediatorHandle";
 import Member from "../base/NekoYuki/entities/Member";
 import Permission from "../base/NekoYuki/enums/Permission";
-import Role, { RoleHelper } from "../base/NekoYuki/enums/Role";
-import ManageMemberRoleRequest from "../requests/ManageMemberRoleRequest";
+import Role, { PositionHelper } from "../base/NekoYuki/enums/Position";
+import ManageMemberPositionRequest from "../requests/ManageMemberPositionRequest";
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
-export default class ManageMemberRoleHandler implements IMediatorHandle<ManageMemberRoleRequest> {
+export default class ManageMemberPositionHandler implements IMediatorHandle<ManageMemberPositionRequest> {
     name: string;
     ableToNavigate: boolean;
     constructor() {
         this.name = "ManageMemberRole";
         this.ableToNavigate = false;
     }
-    async handle(value: ManageMemberRoleRequest): Promise<any> {
+    async handle(value: ManageMemberPositionRequest): Promise<any> {
         do { 
             try {
                 let infoMsg = await value.data.channel.send("Manage Member Role is loading...");
@@ -36,7 +36,7 @@ export default class ManageMemberRoleHandler implements IMediatorHandle<ManageMe
                     throw new CustomError("Member is not registered", ErrorCode.UserCannotBeFound, "Manage Member Role");
                 
                 
-                let roleString = RoleHelper.getRoleString(member.getAllRoles());
+                let roleString = PositionHelper.getPositionString(member.getAllPositions());
                 if (roleString.length === 0) {
                     roleString = "No role";
                 }
@@ -80,10 +80,10 @@ export default class ManageMemberRoleHandler implements IMediatorHandle<ManageMe
                 const role = parseInt(selectedRole);
                 if (member.hasRole(role)) {
                     await roleSelectInteractionGlobal.reply({ content: `Role will be removed: ${roleLabel[roleValue.indexOf(role)]}, updating...`, ephemeral: true });
-                    member.removeRole(role);
+                    member.removePosition(role);
                 } else {
                     await roleSelectInteractionGlobal.reply({ content: `Role will be added: ${roleLabel[roleValue.indexOf(role)]}, updating...`, ephemeral: true });
-                    member.addRole(role);
+                    member.addPosition(role);
                 }
                 await delay(3000);
                 try {

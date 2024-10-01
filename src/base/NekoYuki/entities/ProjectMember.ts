@@ -2,7 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 
 import MemberStatus from "../enums/MemberStatus";
 import Permission from "../enums/Permission";
-import Role from "../enums/Role";
+import Position from "../enums/Position";
 import IMember from "../interfaces/IMember";
 import IProject from "../interfaces/IProject";
 import IProjectMember from "../interfaces/IProjectMember";
@@ -40,7 +40,7 @@ export default class ProjectMember implements IProjectMember {
     @Column()
     isOwner: boolean = false;
 
-    hasRole(role: Role): boolean {
+    hasRole(role: Position): boolean {
         if ((this.roles & role) === role) {
             return true;
         }
@@ -52,12 +52,12 @@ export default class ProjectMember implements IProjectMember {
         }
         return false
     }
-    addRole(role: Role): void {
+    addPosition(role: Position): void {
         if(!this.hasRole(role)){
             this.roles |= role;
         }
     }
-    removeRole(role: Role): void {
+    removePosition(role: Position): void {
         if(this.hasRole(role)){
             this.roles &= ~role;
         }
@@ -72,12 +72,12 @@ export default class ProjectMember implements IProjectMember {
             this.permissions &= ~permission;
         }
     }
-    getAllRoles(): Role[] {
-        let roles: Role[] = [];
-        const roleValues = Object.values(Role);
+    getAllPositions(): Position[] {
+        let roles: Position[] = [];
+        const roleValues = Object.values(Position);
         for (let i = 0; i < roleValues.length; i++) {
-            if ((this.roles & (roleValues[i] as Role)) === roleValues[i]) {
-                roles.push(roleValues[i] as Role);
+            if ((this.roles & (roleValues[i] as Position)) === roleValues[i]) {
+                roles.push(roleValues[i] as Position);
             }
         }
         return roles;

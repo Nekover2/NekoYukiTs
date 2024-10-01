@@ -5,7 +5,7 @@ import Category from "../../base/enums/Category";
 import CustomError from "../../base/classes/CustomError";
 import ErrorCode from "../../base/enums/ErrorCode";
 import ManageMemberPermissionRequest from "../../requests/ManageMemberPermissionRequest";
-import ManageMemberRoleRequest from "../../requests/ManageMemberRoleRequest";
+import ManageMemberRoleRequest from "../../requests/ManageMemberPositionRequest";
 import ManageMemberGeneralRoleRequest from "../../requests/ManageMemberGeneralRoleRequest";
 
 

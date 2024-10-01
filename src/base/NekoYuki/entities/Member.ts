@@ -1,7 +1,7 @@
 import { Column, Entity, JoinTable, OneToMany, PrimaryColumn } from "typeorm";
 import MemberStatus from "../enums/MemberStatus";
 import Permission from "../enums/Permission";
-import Role from "../enums/Role";
+import Position from "../enums/Position";
 import IMember from "../interfaces/IMember";
 import IProjectMember from "../interfaces/IProjectMember";
 import ProjectMember from "./ProjectMember";
@@ -20,7 +20,7 @@ export default class Member implements IMember {
     status: MemberStatus = MemberStatus.ACTIVE;
 
     @Column()
-    roles: number = 0;
+    positions: number = 0;
 
     @Column()
     permissions: number = 0;
@@ -41,8 +41,8 @@ export default class Member implements IMember {
 
     joinedProjectCount : number = -1;
 
-    hasRole(role: Role): boolean {
-        if ((this.roles & role) === role) {
+    hasRole(role: Position): boolean {
+        if ((this.positions & role) === role) {
             return true;
         }
         return false;
@@ -53,11 +53,11 @@ export default class Member implements IMember {
         }
         return false;
     }
-    addRole(role: Role): void {
-        this.roles |= role;
+    addPosition(role: Position): void {
+        this.positions |= role;
     }
-    removeRole(role: Role): void {
-        this.roles &= ~role;
+    removePosition(role: Position): void {
+        this.positions &= ~role;
     }
     addPermission(permission: Permission): void {
         this.permissions |= permission;
@@ -65,12 +65,12 @@ export default class Member implements IMember {
     removePermission(permission: Permission): void {
         this.permissions &= ~permission;
     }
-    getAllRoles(): Role[] {
-        let roles: Role[] = [];
-        const roleValues = Object.values(Role).filter((r) => !isNaN(Number(r)));
+    getAllPositions(): Position[] {
+        let roles: Position[] = [];
+        const roleValues = Object.values(Position).filter((r) => !isNaN(Number(r)));
         for (let i = 0; i < roleValues.length; i++) {
-            if ((this.roles & (roleValues[i] as Role)) === roleValues[i]) {
-                roles.push(roleValues[i] as Role);
+            if ((this.positions & (roleValues[i] as Position)) === roleValues[i]) {
+                roles.push(roleValues[i] as Position);
             }
         }
         return roles;
@@ -94,6 +94,16 @@ export default class Member implements IMember {
         return permissionArray;
     }
 
+    allRoleString(): string {
+        let res = "";
+        this.generalMemberRole.forEach((role) => {
+            res += role.Name + ", ";
+        });
+        if (res.length === 0) {
+            return "No role";
+        }
+        return res;
+    }
     getPermissionString(permission: Permission) {
         const permissionLabel = Object.keys(Permission).filter((p) => isNaN(Number(p)));
         const permissionValue = Object.values(Permission).filter((p) => !isNaN(Number(p)));

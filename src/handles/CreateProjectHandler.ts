@@ -7,7 +7,7 @@ import Permission from "../base/NekoYuki/enums/Permission";
 import CreateProjectRequest from "../requests/CreateProjectRequest";
 import Project from "../base/NekoYuki/entities/Project";
 import ProjectMember from "../base/NekoYuki/entities/ProjectMember";
-import Role, { RoleHelper } from "../base/NekoYuki/enums/Role";
+import Position, { PositionHelper } from "../base/NekoYuki/enums/Position";
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export default class CreateProjectHandler implements IMediatorHandle<CreateProjectRequest> {
@@ -170,13 +170,13 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
     async getOwnerRoles(value: CreateProjectRequest, messageList : Array<Message>): Promise<ProjectMember> {
         let ownerRoles = new ProjectMember();
         do {
-            let roleString = RoleHelper.getRoleString(ownerRoles.getAllRoles());
+            let roleString = PositionHelper.getPositionString(ownerRoles.getAllPositions());
             if (roleString.length === 0) {
                 roleString = "No role";
             }
 
-            const roleValue = Object.values(Role).filter((r) => !isNaN(Number(r)));
-            const roleLabel = Object.keys(Role).filter((r) => isNaN(Number(r)));
+            const roleValue = Object.values(Position).filter((r) => !isNaN(Number(r)));
+            const roleLabel = Object.keys(Position).filter((r) => isNaN(Number(r)));
             
             const roleSelectOptions = roleLabel.map((label, index) => {
                 return {
@@ -206,7 +206,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
 
 
             const roleDashboardEmbed = new EmbedBuilder()
-                .setTitle(`Role Dashboard for ${value.data.author.displayName}`)
+                .setTitle(`Position Dashboard for ${value.data.author.displayName}`)
                 .setDescription("This is a role dashboard for the member you selected, you can manage their roles here. You can change their roles by picking roles input below. Note that, pick an existing role will remove it, and pick a non-existing role will add it. ***When you're done, click the accept button.***")
                 .setColor("Random")
                 .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL() })
@@ -232,11 +232,11 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
                     const selectedRole = roleSelectInteraction.values[0];
                     const role = parseInt(selectedRole);
                     if (ownerRoles.hasRole(role)) {
-                        await roleSelectInteraction.reply({ content: `Role will be removed: ${roleLabel[roleValue.indexOf(role)]}`, ephemeral: true });
-                        ownerRoles.removeRole(role);
+                        await roleSelectInteraction.reply({ content: `Position will be removed: ${roleLabel[roleValue.indexOf(role)]}`, ephemeral: true });
+                        ownerRoles.removePosition(role);
                     } else {
-                        await roleSelectInteraction.reply({ content: `Role will be added: ${roleLabel[roleValue.indexOf(role)]}`, ephemeral: true });
-                        ownerRoles.addRole(role);
+                        await roleSelectInteraction.reply({ content: `Position will be added: ${roleLabel[roleValue.indexOf(role)]}`, ephemeral: true });
+                        ownerRoles.addPosition(role);
                     }
                     await delay(3000);
                     await roleMsg.delete();

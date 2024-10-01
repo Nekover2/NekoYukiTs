@@ -5,14 +5,14 @@ import Category from "../../base/enums/Category";
 import CustomError from "../../base/classes/CustomError";
 import ErrorCode from "../../base/enums/ErrorCode";
 import ManageMemberPermissionRequest from "../../requests/ManageMemberPermissionRequest";
-import ManageMemberRoleRequest from "../../requests/ManageMemberRoleRequest";
+import ManageMemberRoleRequest from "../../requests/ManageMemberPositionRequest";
 
 
-export default class CreateMember extends Command {
+export default class ManageMemberPosition extends Command {
     constructor(client: CustomClient) {
         super(client, {
-            name: "manage-member-role",
-            description: "Update role of a member", 
+            name: "manage-member-position",
+            description: "Update position of a member", 
             category: Category.NekoYuki,
             options: [{
                 name: "member",
