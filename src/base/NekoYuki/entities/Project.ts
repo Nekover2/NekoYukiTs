@@ -2,13 +2,13 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import MemberStatus from "../enums/MemberStatus";
 import Permission from "../enums/Permission";
 import ProjectStatus from "../enums/ProjectStatus";
-import Position from "../enums/Position";
 import IMember from "../interfaces/IMember";
 import IProject from "../interfaces/IProject";
 import IProjectMember from "../interfaces/IProjectMember";
 import ProjectMember from "./ProjectMember";
 import IChapter from "../interfaces/IChapter";
 import Chapter from "./Chapter";
+import GeneralRole from "./GeneralRole";
 
 // TODO: Add builder pattern to this class
 
@@ -44,7 +44,7 @@ export default class Project implements IProject {
     @OneToMany(() => Chapter, chapter => chapter.project)
     //@ts-ignore
     chapters: IChapter[]
-    addMember(member: IMember, roles: Position[], permissions: Permission[]): IProjectMember | undefined {
+    addMember(member: IMember, roles: GeneralRole, permissions: Permission[]): IProjectMember | undefined {
         // find the member in the members array
         const oldMember = this.members.find((m) => m.member.discordId === member.discordId);
         if (oldMember) {
@@ -58,11 +58,7 @@ export default class Project implements IProject {
         newMember.status = MemberStatus.ACTIVE;
         newMember.lastActive = new Date();
         newMember.isOwner = false;
-
-
-        roles.forEach((role) => {
-            newMember.addPosition(role);
-        });
+        newMember.setRole(roles);
         permissions.forEach((permission) => {
             newMember.addPermission(permission);
         });
@@ -89,29 +85,7 @@ export default class Project implements IProject {
         }
         return false;
     }
-    hasProjectRole(member: IMember, role: Position): boolean {
-        if(member.hasRole(role)){
-            return true;
-        }
-        if(this.members.find((m) => m.member.discordId === member.discordId)?.hasRole(role)){
-            return true;
-        }
-        return false;
-    }
-    addPosition(member: IMember, role: Position): void {
-        const projectMember = this.members.find((m) => m.member.discordId === member.discordId);
-        if(projectMember){
-            if(!projectMember.hasRole(role))
-                projectMember.addPosition(role);
-        }
-    }
-    removePosition(member: IMember, role: Position): void {
-        const projectMember = this.members.find((m) => m.member.discordId === member.discordId);
-        if(projectMember){
-            if(projectMember.hasRole(role))
-                projectMember.removePosition(role);
-        }
-    }
+    
     addPermission(member: IMember, permission: Permission): void {
         const projectMember = this.members.find((m) => m.member.discordId === member.discordId);
         if(projectMember){
@@ -125,19 +99,6 @@ export default class Project implements IProject {
             if(projectMember.hasPermission(permission))
                 projectMember.removePermission(permission);
         }
-    }
-    getAllPositions(member: IMember): Position[] {
-        let roles: Position[] = [];
-        const projectMember = this.members.find((m) => m.member.discordId === member.discordId);
-        if(projectMember) {
-            let enumValues = Object.values(Position);
-            for(let i = 0; i < enumValues.length; i++){
-                if(projectMember.hasRole(enumValues[i] as Position)){
-                    roles.push(enumValues[i] as Position);
-                }
-            }
-        }
-        return roles;
     }
     getAllPermissions(member: IMember): Permission[] {
         let permissions: Permission[] = [];
@@ -156,5 +117,4 @@ export default class Project implements IProject {
         //TODO : Correctly implement this method
         throw new Error("Method not implemented.");
     }
-
 }

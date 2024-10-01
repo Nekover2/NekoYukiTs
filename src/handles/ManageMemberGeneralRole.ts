@@ -5,6 +5,7 @@ import IMediatorHandle from "../base/interfaces/IMediatorHandle";
 import Member from "../base/NekoYuki/entities/Member";
 import ManageMemberGeneralRoleRequest from "../requests/ManageMemberGeneralRoleRequest";
 import GeneralRole from "../base/NekoYuki/entities/GeneralRole";
+import MemberGeneralRole from "../base/NekoYuki/entities/GeneralMemberRole";
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<ManageMemberGeneralRoleRequest> {
@@ -29,7 +30,7 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
             if (value.data.member) {
                 const existingMember = await value.data.customClient.dataSources.getRepository(Member).findOne({
                     where: { discordId: value.data.member.id },
-                    relations: ["generalMemberRole"]
+                    relations: ["generalRoles"]
                 });
                 if (!existingMember) {
                     throw new CustomError("Member not found", ErrorCode.UserCannotBeFound, "Manage Member General Role");
@@ -40,7 +41,7 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
 
             const existingMember = await value.data.customClient.dataSources.getRepository(Member).findOne({
                 where: { discordId: value.data.interaction.user.id },
-                relations: ["generalMemberRole"]
+                relations: ["generalRoles"]
             });
 
             const chooseMemberEmbed = new EmbedBuilder()
@@ -70,7 +71,7 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
                 }
                 const choosedMember = await value.data.customClient.dataSources.getRepository(Member).findOne({
                     where: { discordId: selectedUser.id },
-                    relations: ["generalMemberRole"]
+                    relations: ["generalRoles"]
                 });
                 if (!choosedMember) {
                     throw new CustomError("Member not found", ErrorCode.UserCannotBeFound, "Manage Member General Role");
@@ -94,7 +95,7 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
             const roleList = await value.data.customClient.dataSources.getRepository(GeneralRole).find();
             const currMember = await value.data.customClient.dataSources.getRepository(Member).findOne({
                 where: { discordId: member.discordId },
-                relations: ["generalMemberRole"]
+                relations: ["generalRoles"]
             });
             if (!currMember) {
                 throw new CustomError("Member not found", ErrorCode.UserCannotBeFound, "Manage Member General Role");
@@ -113,8 +114,8 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
                         `- 5. You can finish this operation by clicking the ***finish*** button.\n`)
                     .setTimestamp()
                     .addFields([
-                        { name: "Old Roles", value: member.generalMemberRole.map(role => role.Name).join(", ") || "No Role" },
-                        { name: "Current Roles", value: currMember.generalMemberRole.map(role => role.Name).join(", ") || "No Role" },
+                        { name: "Old Roles", value: member.generalRoles.map(role => role.role.Name).join(", ") || "No Role" },
+                        { name: "Current Roles", value: currMember.generalRoles.map(role => role.role.Name).join(", ") || "No Role" },
                     ])
                     .setFooter({ text: "Powered by NekoYuki" });
                 const btnRow = new ActionRowBuilder()
@@ -151,13 +152,16 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
                     if (roleSelectInteraction.isButton()) {
                         if (roleSelectInteraction.customId === "finish") {
                             await value.data.customClient.dataSources.getRepository(Member).save(member);
+                            for (const role of currMember.generalRoles) {
+                                await value.data.customClient.dataSources.getRepository(MemberGeneralRole).save(role);
+                            }
                             const finishEmbed = new EmbedBuilder()
                                 .setAuthor({ name: value.data.interaction.user.username, iconURL: value.data.interaction.user.displayAvatarURL() })
                                 .setColor("Green")
                                 .setTitle("General Role Management")
                                 .setDescription(`Successfully managed general role for <@${member.discordId}>.`)
                                 .addFields([
-                                    { name: "Current Roles", value: currMember.generalMemberRole.map(role => role.Name).join(", ") || "No Role" }
+                                    { name: "Current Roles", value: currMember.generalRoles.map(role => role.role.Name).join(", ") || "No Role" }
                                 ])
                                 .setTimestamp()
                                 .setFooter({ text: "Powered by NekoYuki" });
@@ -175,7 +179,7 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
                                 .setTitle("General Role Management")
                                 .setDescription(`Cancelled general role management for <@${member.discordId}>. All changes are reverted.`)
                                 .addFields([
-                                    { name: "Current Roles", value: member.generalMemberRole.map(role => role.Name).join(", ") || "No Role" }
+                                    { name: "Current Roles", value: member.generalRoles.map(role => role.role.Name).join(", ") || "No Role" }
                                 ])
                                 .setTimestamp()
                                 .setFooter({ text: "Powered by NekoYuki" });
@@ -193,11 +197,15 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
                         if (!selectedRole) {
                             throw new CustomError("Role not found", ErrorCode.UserCannotBeFound, "Manage Member General Role");
                         }
-                        const roleIndex = currMember.generalMemberRole.findIndex(role => role.Id === selectedRole.Id);
+                        const newMemberGeneralRole = new MemberGeneralRole();
+                        newMemberGeneralRole.member = currMember;
+                        newMemberGeneralRole.role = selectedRole;
+                        newMemberGeneralRole.createdAt = new Date();
+                        const roleIndex  = currMember.generalRoles.findIndex(role => role.role.Id === selectedRole.Id);
                         if (roleIndex !== -1) {
-                            currMember.generalMemberRole.splice(roleIndex, 1);
+                            currMember.generalRoles.splice(roleIndex, 1);
                         } else {
-                            currMember.generalMemberRole.push(selectedRole);
+                            currMember.generalRoles.push(newMemberGeneralRole);
                         }
                     }
                 } catch (error) {

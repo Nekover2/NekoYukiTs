@@ -5,7 +5,6 @@ import IMediatorHandle from "../base/interfaces/IMediatorHandle";
 import Project from "../base/NekoYuki/entities/Project";
 import ViewProjectRequest from "../requests/ViewProjectRequest";
 import { ActionRowBuilder, ButtonBuilder, SelectMenuBuilder } from "@discordjs/builders";
-import { PositionHelper } from "../base/NekoYuki/enums/Position";
 import CreateChapterRequest from "../requests/CreateChapterRequest";
 import Member from "../base/NekoYuki/entities/Member";
 import Permission from "../base/NekoYuki/enums/Permission";
@@ -117,7 +116,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             projectDescription += `**<@${project.ownerId}>\n**`;
             projectDescription += `------Members------\n`;
             project.members.forEach(m => {
-                projectDescription += `- <@${m.id}> - ${PositionHelper.getPositionString(m.getAllPositions())}\n`;
+                projectDescription += `- <@${m.id}>\n`;
             });
             const projectEmbed = new EmbedBuilder()
                 .setAuthor({ name: value.data.author.username, iconURL: value.data.author.displayAvatarURL() })

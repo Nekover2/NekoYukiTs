@@ -4,7 +4,6 @@ import ViewMemberRequest from "../requests/ViewMemberRequest";
 import ErrorCode from "../base/enums/ErrorCode";
 import CustomError from "../base/classes/CustomError";
 import Member from "../base/NekoYuki/entities/Member";
-import { PositionHelper } from "../base/NekoYuki/enums/Position";
 import { PermissionHelper } from "../base/NekoYuki/enums/Permission";
 
 export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequest> {
@@ -102,6 +101,7 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
             const yukiMember = await value.data.client.dataSources.getRepository(Member).createQueryBuilder("member")
                 .where("member.discordId = :discordId", { discordId: member.id })
                 .leftJoin('member.joinedProjects', 'project')
+                .leftJoinAndSelect('member.generalRoles', 'generalRole')
                 .loadRelationCountAndMap("member.joinedProjectCount", "member.joinedProjects")
                 .getOne();
             if (!yukiMember) {

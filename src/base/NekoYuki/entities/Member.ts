@@ -1,13 +1,10 @@
 import { Column, Entity, JoinTable, OneToMany, PrimaryColumn } from "typeorm";
 import MemberStatus from "../enums/MemberStatus";
 import Permission from "../enums/Permission";
-import Position from "../enums/Position";
 import IMember from "../interfaces/IMember";
 import IProjectMember from "../interfaces/IProjectMember";
 import ProjectMember from "./ProjectMember";
-import IGeneralRole from "../interfaces/IGeneralRole";
-import GeneralRole from "./GeneralRole";
-import GeneralMemerRole from "./GeneralMemberRole";
+import MemberGeneralRole from "./GeneralMemberRole";
 
 
 // TODO: Add builder pattern to this class
@@ -18,9 +15,6 @@ export default class Member implements IMember {
 
     @Column()
     status: MemberStatus = MemberStatus.ACTIVE;
-
-    @Column()
-    positions: number = 0;
 
     @Column()
     permissions: number = 0;
@@ -35,45 +29,23 @@ export default class Member implements IMember {
     // @ts-ignore
     joinedProjects: IProjectMember[];
 
-    @OneToMany(() => GeneralMemerRole, generalMemerRole => generalMemerRole.member)
+    @OneToMany(() => MemberGeneralRole, generalMemerRole => generalMemerRole.member)
     // @ts-ignore
-    generalMemberRole : GeneralRole[];
+    generalRoles : MemberGeneralRole[];
 
     joinedProjectCount : number = -1;
 
-    hasRole(role: Position): boolean {
-        if ((this.positions & role) === role) {
-            return true;
-        }
-        return false;
-    }
     hasPermission(permission: Permission): boolean {
         if ((this.permissions & permission) === permission) {
             return true;
         }
         return false;
     }
-    addPosition(role: Position): void {
-        this.positions |= role;
-    }
-    removePosition(role: Position): void {
-        this.positions &= ~role;
-    }
     addPermission(permission: Permission): void {
         this.permissions |= permission;
     }
     removePermission(permission: Permission): void {
         this.permissions &= ~permission;
-    }
-    getAllPositions(): Position[] {
-        let roles: Position[] = [];
-        const roleValues = Object.values(Position).filter((r) => !isNaN(Number(r)));
-        for (let i = 0; i < roleValues.length; i++) {
-            if ((this.positions & (roleValues[i] as Position)) === roleValues[i]) {
-                roles.push(roleValues[i] as Position);
-            }
-        }
-        return roles;
     }
     getAllPermissions(): Permission[] {
         let permissions: Permission[] = [];
@@ -96,8 +68,8 @@ export default class Member implements IMember {
 
     allRoleString(): string {
         let res = "";
-        this.generalMemberRole.forEach((role) => {
-            res += role.Name + ", ";
+        this.generalRoles.forEach((role) => {
+            res += role.role.Name + ", ";
         });
         if (res.length === 0) {
             return "No role";

@@ -2,7 +2,7 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import IGeneralRole from "../interfaces/IGeneralRole";
 import Permission, { PermissionHelper } from "../enums/Permission";
 import Member from "./Member";
-import GeneralMemerRole from "./GeneralMemberRole";
+import MemberGeneralRole from "./GeneralMemberRole";
 
 @Entity()
 export default class GeneralRole implements IGeneralRole {
@@ -15,7 +15,7 @@ export default class GeneralRole implements IGeneralRole {
     Permissions: number = 0;
     @Column()
     CreatedAt: Date = new Date();
-    @OneToMany(() => GeneralMemerRole, generalMemerRole => generalMemerRole.role)
+    @OneToMany(() => MemberGeneralRole, generalMemerRole => generalMemerRole.role)
     // @ts-ignore
     Members: Member[];
     hasPermission(permission: Permission) {

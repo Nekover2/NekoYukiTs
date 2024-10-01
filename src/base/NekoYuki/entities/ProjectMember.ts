@@ -1,17 +1,18 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToOne, JoinColumn } from 'typeorm';
 
 import MemberStatus from "../enums/MemberStatus";
 import Permission from "../enums/Permission";
-import Position from "../enums/Position";
 import IMember from "../interfaces/IMember";
 import IProject from "../interfaces/IProject";
 import IProjectMember from "../interfaces/IProjectMember";
 import Member from './Member';
 import Project from './Project';
+import GeneralRole from './GeneralRole';
 
 // TODO: Add builder pattern to this class
 @Entity()
 export default class ProjectMember implements IProjectMember {
+    
 
     @PrimaryGeneratedColumn()
     id: number = 0;
@@ -22,8 +23,10 @@ export default class ProjectMember implements IProjectMember {
     @ManyToOne(() => Project, project => project.members)
     project: IProject = new Project();
 
-    @Column()
-    roles: number = 0;
+    @OneToOne(() => GeneralRole)
+    @JoinColumn()
+    // @ts-ignore
+    role: GeneralRole;
 
     @Column()
     permissions: number = 0;
@@ -40,27 +43,11 @@ export default class ProjectMember implements IProjectMember {
     @Column()
     isOwner: boolean = false;
 
-    hasRole(role: Position): boolean {
-        if ((this.roles & role) === role) {
-            return true;
-        }
-        return false
-    }
     hasPermission(permission: Permission): boolean {
         if ((this.permissions & permission) === permission) {
             return true;
         }
         return false
-    }
-    addPosition(role: Position): void {
-        if(!this.hasRole(role)){
-            this.roles |= role;
-        }
-    }
-    removePosition(role: Position): void {
-        if(this.hasRole(role)){
-            this.roles &= ~role;
-        }
     }
     addPermission(permission: Permission): void {
         if(!this.hasPermission(permission)){
@@ -71,16 +58,6 @@ export default class ProjectMember implements IProjectMember {
         if(this.hasPermission(permission)){
             this.permissions &= ~permission;
         }
-    }
-    getAllPositions(): Position[] {
-        let roles: Position[] = [];
-        const roleValues = Object.values(Position);
-        for (let i = 0; i < roleValues.length; i++) {
-            if ((this.roles & (roleValues[i] as Position)) === roleValues[i]) {
-                roles.push(roleValues[i] as Position);
-            }
-        }
-        return roles;
     }
     getAllPermissions(): Permission[] {
         let permissions: Permission[] = [];
@@ -95,6 +72,11 @@ export default class ProjectMember implements IProjectMember {
     permissionString(): string {
         throw new Error("Method not implemented.");
     }
+
+    setRole(role: GeneralRole): void {
+        this.role = role;
+    }
+
     updateLastActive(): void {
         this.lastActive = new Date();
     }
