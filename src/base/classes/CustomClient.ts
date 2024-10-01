@@ -12,6 +12,7 @@ import { glob } from 'glob';
 import path from 'path';
 import IMediatorHandle from '../interfaces/IMediatorHandle';
 import IMediatorRequest from '../interfaces/IMediatorRequest';
+import EventEmitter from 'events';
 export default class CustomClient extends Client implements ICustomClient{
     config: IConfig;
     handler: Handler;
@@ -21,6 +22,7 @@ export default class CustomClient extends Client implements ICustomClient{
     dataSources: DataSource;
     mediator: Mediator;
     navigations: ActionRowBuilder;
+    nekoYukiEvent: EventEmitter;
     constructor(){
         super({
             intents: [
@@ -40,6 +42,7 @@ export default class CustomClient extends Client implements ICustomClient{
         this.mediator = new Mediator();
         this.mediator.LoadMediator(`build/requests/**/*.js`, `build/handles/**/*.js`);
         this.navigations = new ActionRowBuilder();
+        this.nekoYukiEvent = new EventEmitter();
     }
     Init = async () => {
         await this.dataSources.initialize();
@@ -54,6 +57,7 @@ export default class CustomClient extends Client implements ICustomClient{
     LoadHandlers = () : void => {
         this.handler.LoadEvents();
         this.handler.LoadCommands();
+        this.handler.LoadNekoYukiEvents();
     }
 
     LoadNavigation = async (handlerPath: string) : Promise<void> => {

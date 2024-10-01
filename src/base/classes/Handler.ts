@@ -6,6 +6,7 @@ import Event from "./Event";
 import CustomClient from "./CustomClient";
 import ICommand from "../interfaces/ICommand";
 import ISubCommand from "../interfaces/ISubCommand";
+import NekoYukiEvent from "../NekoYuki/classes/NekoYukiEvent";
 
 
 export default class Handler implements IHandler {
@@ -48,4 +49,20 @@ export default class Handler implements IHandler {
         });
     };
 
+    LoadNekoYukiEvents = async () : Promise<void> => {
+        const files = (await glob(`build/NekoYukiEvents/**/*.js`)).map((file) => path.resolve(file));
+
+        files.map(async (file : string) => {
+            const event : NekoYukiEvent = new (await import(file)).default(this.client);
+            if(!event.Name)
+                return delete require.cache[require.resolve(file)] && console.log(`NekoYukiEvent ${file} does not have a name property`);
+            const execute = (...args: any[]) => event.Execute(...args);
+            // @ts-ignore
+            if(event.Once) this.client.nekoYukiEvent.once(event.Name, execute);
+            // @ts-ignore
+            else this.client.nekoYukiEvent.on(event.Name, execute); 
+            console.log(`[Handler] Loaded NekoYukiEvent ${event.Name}`);
+            return delete require.cache[require.resolve(file)];
+        });
+    }
 }

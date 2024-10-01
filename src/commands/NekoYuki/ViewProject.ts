@@ -2,7 +2,6 @@ import { ChatInputCommandInteraction, PermissionsBitField, TextChannel } from "d
 import Command from "../../base/classes/Command";
 import CustomClient from "../../base/classes/CustomClient";
 import Category from "../../base/enums/Category";
-import ICustomClient from "../../base/interfaces/ICustomClient";
 import CustomError from "../../base/classes/CustomError";
 import ErrorCode from "../../base/enums/ErrorCode";
 import ViewProjectRequest from "../../requests/ViewProjectRequest";

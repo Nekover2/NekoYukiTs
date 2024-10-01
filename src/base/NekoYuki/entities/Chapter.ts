@@ -8,9 +8,12 @@ import ProjectMember from "./ProjectMember";
 @Entity()
 export default class Chapter implements IChapter {
     @PrimaryGeneratedColumn()
-    id: number = 0;
+    // @ts-ignore
+    id: number;
     @Column()
     title: string = "";
+    @Column()
+    link: string = "";
     @Column()
     creationDate: Date = new Date();
     @Column()
@@ -18,7 +21,4 @@ export default class Chapter implements IChapter {
     @ManyToOne(() => Project, project => project.chapters)
     //@ts-ignore
     project: IProject;
-    @OneToMany(() => ProjectMember, projectMember => projectMember.project)
-    //@ts-ignore
-    members: IProjectMember[];
 }

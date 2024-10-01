@@ -37,7 +37,8 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
             if (!infoInteraction) return;
             const chapterInfo = await this.getChapterInfo(infoInteraction, sentMsgs);
             if (!chapterInfo) return;
-            await this.saveChapter(value, currProject, chapterInfo);
+            const newChapter = await this.saveChapter(value, currProject, chapterInfo);
+            value.data.client.nekoYukiEvent.emit("ChapterCreated", newChapter);
             return;
         } catch (error) {
 
@@ -113,18 +114,26 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
                 .setLabel("Chapter Name")
                 .setStyle(TextInputStyle.Short)
                 .setRequired(true);
+            const chapterLinkInput = new TextInputBuilder()
+                .setCustomId("chapter-link") 
+                .setPlaceholder("Chapter Link")
+                .setLabel("Chapter Link")
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
             const chapterNameRow = new ActionRowBuilder().addComponents(chapterNameInput);
+            const chapterLinkRow = new ActionRowBuilder().addComponents(chapterLinkInput);
             // @ts-ignore
-            getInfoModal.addComponents(chapterNameRow);
+            getInfoModal.addComponents(chapterNameRow, chapterLinkRow);
             await interaction.showModal(getInfoModal);
 
             try {
                 let modalResponse = await interaction.awaitModalSubmit({ time: 60000 });
                 let chapterName = modalResponse.fields.getTextInputValue("chapter-name");
-                await modalResponse.reply(`Chapter name: ${chapterName}, creating chapter, please wait...`);
+                const chapterLink = modalResponse.fields.getTextInputValue("chapter-link");
+                await modalResponse.reply(`- Chapter name: ${chapterName}\n- Chapter link: ${chapterLink}\n Creating chapter, please wait...`);
                 await delay(2000);
                 modalResponse.deleteReply();
-                return new CreateChapterOptions(chapterName);
+                return new CreateChapterOptions(chapterName, chapterLink);
             } catch (error) {
                 if (error instanceof CustomError) {
                     throw error;
@@ -139,14 +148,14 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
         }
     }
 
-    async saveChapter(value: CreateChapterRequest, project: IProject, chapterInfo: CreateChapterOptions): Promise<boolean> {
+    async saveChapter(value: CreateChapterRequest, project: IProject, chapterInfo: CreateChapterOptions): Promise<Chapter> {
         try {
             const newChapter = new Chapter();
             newChapter.title = chapterInfo.name;
+            newChapter.link = chapterInfo.link;
             newChapter.project = project;
             newChapter.verified = false;
             newChapter.creationDate = new Date();
-            newChapter.members = project.members;
             const progressEmbed = new EmbedBuilder()
                 .setTitle("Creating Chapter")
                 .setColor("Orange")
@@ -155,21 +164,40 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
                 .setDescription("Saving chapter to database...")
                 .addFields([
                     { name: "Chapter Name", value: chapterInfo.name },
+                    { name: "Chapter Link", value: chapterInfo.link },
                     { name: "Project Name", value: project.name },
                     { name: "Creation Date", value: newChapter.creationDate.toDateString() },
                     { name: "Verified", value: newChapter.verified.toString() }
                 ]);
             const progressMsg = await value.data.channel.send({ embeds: [progressEmbed] });
             delay(3000);
+            const savedChapter = await value.data.client.dataSources.getRepository(Chapter).findOne({
+                where: { title: newChapter.title, link: newChapter.link}
+            });
+            if (savedChapter) {
+                progressEmbed
+                    .setColor("Red")
+                    .setDescription("Chapter already exists, returning...");
+                await progressMsg.edit({ embeds: [progressEmbed] });
+                await delay(2000);
+                progressMsg.delete();
+                return savedChapter;
+            }
             await value.data.client.dataSources.getRepository(Chapter).save(newChapter);
             progressEmbed
                 .setColor("Green")
                 .setDescription("Chapter saved successfully! returning...");
             await progressMsg.edit({ embeds: [progressEmbed] });
             await delay(2000);
-            return true;
+            progressMsg.delete();
+            
+            const savedChapter2 = await value.data.client.dataSources.getRepository(Chapter).findOne({
+                where: { title: newChapter.title, link: newChapter.link},
+                relations: ["project"]
+            });
+            if (!savedChapter2) throw new CustomError("Cannot find chapter in database", ErrorCode.InternalServerError, "Create Chapter");
+            return newChapter;
         } catch (error) {
-
             throw new CustomError("Cannot save chapter to database, please try again later...", ErrorCode.InternalServerError, "Create Chapter", error as Error);
         }
     }
@@ -177,8 +205,9 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
 
 class CreateChapterOptions {
     name: string;
-
-    constructor(name: string) {
+    link: string;
+    constructor(name: string, link: string) {
         this.name = name;
+        this.link = link; 
     }
 }

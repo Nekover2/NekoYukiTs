@@ -4,6 +4,7 @@ import ICommand from "./ICommand";
 import ISubCommand from "./ISubCommand";
 import { DataSource } from "typeorm";
 import IMediator from "./IMediator";
+import { EventEmitter } from "events";
 
 export default interface ICustomClient {
     config : IConfig;
@@ -12,6 +13,7 @@ export default interface ICustomClient {
     cooldowns : Collection<string, Collection<string, number>>;
     dataSources : DataSource;
     mediator : IMediator;
+    nekoYukiEvent : EventEmitter;
     navigations : ActionRowBuilder;
     Init : () => void;
     LoadHandlers : () => void;

@@ -5,6 +5,9 @@ import Role from "../enums/Role";
 import IMember from "../interfaces/IMember";
 import IProjectMember from "../interfaces/IProjectMember";
 import ProjectMember from "./ProjectMember";
+import IGeneralRole from "../interfaces/IGeneralRole";
+import GeneralRole from "./GeneralRole";
+import GeneralMemerRole from "./GeneralMemberRole";
 
 
 // TODO: Add builder pattern to this class
@@ -31,6 +34,10 @@ export default class Member implements IMember {
     @OneToMany(() => ProjectMember, projectMember => projectMember.member)
     // @ts-ignore
     joinedProjects: IProjectMember[];
+
+    @OneToMany(() => GeneralMemerRole, generalMemerRole => generalMemerRole.member)
+    // @ts-ignore
+    generalMemerRole : IGeneralRole[];
 
     joinedProjectCount : number = -1;
 
