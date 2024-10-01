@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ComponentType, EmbedBuilder, Interaction, Message, ModalBuilder, StringSelectMenuBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ComponentType, EmbedBuilder, Interaction, Message, ModalBuilder, StringSelectMenuBuilder, TextChannel, TextInputBuilder, TextInputStyle } from "discord.js";
 import CustomError from "../base/classes/CustomError";
 import ErrorCode from "../base/enums/ErrorCode";
 import IMediatorHandle from "../base/interfaces/IMediatorHandle";
@@ -8,6 +8,7 @@ import CreateProjectRequest from "../requests/CreateProjectRequest";
 import Project from "../base/NekoYuki/entities/Project";
 import ProjectMember from "../base/NekoYuki/entities/ProjectMember";
 import GeneralRole from "../base/NekoYuki/entities/GeneralRole";
+import ViewProjectRequest from "../requests/ViewProjectRequest";
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export default class CreateProjectHandler implements IMediatorHandle<CreateProjectRequest> {
     name: string;
@@ -32,7 +33,6 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
             // Step 2: send prompt to get project information
             const infoInteraction = await this.sendInfo(value, messageList);
             console.log("Done sending info");
-
             // Step 3: get project information
             const projectInfoInput = await this.getBasicInformation(infoInteraction, messageList);
             console.log("Done getting basic info");
@@ -42,53 +42,28 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
             if (projectWithSameName) {
                 throw new CustomError("Project with the same name already exists", ErrorCode.BadRequest, "Create Project");
             }
-
-
             let newProject = new Project();
             newProject.name = projectInfoInput.name;
             newProject.ownerId = authorMember.discordId;
             newProject.lastUpdated = new Date();
-            await value.data.client.dataSources.getRepository(Project).save(newProject);
-            const savedProject = newProject;
-            // const savedProject = await value.data.client.dataSources.getRepository(Project).findOne({
-            //     where: { name: projectInfoInput.name, ownerId: authorMember.discordId }
-            // });
-            // if (!savedProject) {
-            //     throw new CustomError("An error occurred while saving the project", ErrorCode.InternalServerError, "Create Project");
-            // }
+            try {
+                await value.data.client.dataSources.getRepository(Project).save(newProject);
+            } catch (error) {
+                throw new CustomError("An error occurred while saving the project to the database", ErrorCode.InternalServerError, "Create Project", error as Error);
+            }
+            const savedProject = await value.data.client.dataSources.getRepository(Project).findOne({
+                where: { name: projectInfoInput.name, ownerId: authorMember.discordId }
+            });
+            if (!savedProject) {
+                throw new CustomError("An error occurred while saving the project", ErrorCode.InternalServerError, "Create Project");
+            }
 
             // Step 4: Get owner roles
             let ownerRoles = await this.getOwnerRoles(value, savedProject, messageList);
             console.log("Done getting owner roles");
-            ownerRoles.forEach(async (role) => {
-                console.log(role);
-            });
 
             // Step 5: save to database
-            // const createProjectStatusEmbed = new EmbedBuilder()
-            //     .setTitle(`Creating project ${newProject.name}`)
-            //     .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL() })
-            //     .setTitle("Saving project to database")
-            //     .setDescription("***Step 1:*** Adding project to the database...")
-            //     .setColor("Random")
-            //     .setFooter({ text: "NekoYuki's manager" })
-            //     .setTimestamp();
-            // const createProjectStatusMsg = await value.data.channel.send({ embeds: [createProjectStatusEmbed] });
-            // await delay(3000);
-            // createProjectStatusEmbed.setDescription(`- ***Step 1:*** Adding project to the database... ***Done***\n- ***Step 2:*** Adding owner roles to the database...`);
-            // await createProjectStatusMsg.edit({ content: "", embeds: [createProjectStatusEmbed] });
-            // createProjectStatusEmbed.setDescription(`- ***Step 1:*** Adding project to the database... ***Done***\n- ***Step 2:*** Adding owner roles to the database... ***Done*** - ***Step 3***: Cleaning...`);
-            // delay(3000);
-            // await createProjectStatusMsg.edit({ content: "", embeds: [createProjectStatusEmbed] });
-            // for (let msg of messageList)
-            //     if (msg.deletable)
-            //         msg.delete();
-            // createProjectStatusEmbed.setTitle("All Done!")
-            //     .setDescription("✔ Project has been created successfully!")
-            //     .setColor("Green");
-            // await createProjectStatusMsg.edit({ content: "", embeds: [createProjectStatusEmbed] });
-            // await delay(5000);
-            // TODO: send request to project viewer to view the project
+            await this.saveToDatabase(value, savedProject, ownerRoles);
         } catch (error) {
 
             if (error instanceof CustomError) {
@@ -177,7 +152,6 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
 
     async getOwnerRoles(value: CreateProjectRequest, project: Project, messageList: Array<Message>): Promise<ProjectMember[]> {
         try {
-
             let ownerRoles: ProjectMember[] = [];
             const currMember = await value.data.client.dataSources.getRepository(Member).findOne({
                 where: { discordId: value.data.author.id },
@@ -204,7 +178,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
                             value: role.Id.toString()
                         }
                     }));
-
+                
                 const roleSelectRow = new ActionRowBuilder().addComponents(roleSelect);
                 const acceptButton = new ButtonBuilder()
                     .setCustomId("accept")
@@ -216,7 +190,6 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
                     .setStyle(ButtonStyle.Danger);
 
                 const btnRow = new ActionRowBuilder().addComponents(acceptButton, cancelButton);
-
 
                 const roleDashboardEmbed = new EmbedBuilder()
                     .setTitle(`Position Dashboard for ${value.data.author.displayName}`)
@@ -232,13 +205,17 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
                     .addFields({ name: "Current roles", value: ownerRolesString });
                 // @ts-ignore
                 const roleMsg = await value.data.channel.send({ embeds: [roleDashboardEmbed], components: [roleSelectRow, btnRow] });
-
                 try {
                     const roleSelectInteraction = await value.data.channel.awaitMessageComponent({ filter: (interaction) => interaction.user.id === value.data.author.id, time: 60000 });
+                    await roleMsg.delete();
                     if (roleSelectInteraction.isButton()) {
                         if (roleSelectInteraction.customId === "accept") {
-                            if (roleMsg.deletable)
-                                await roleMsg.delete();
+                            if(ownerRoles.length == 0) {
+                                const warningMsg = await roleSelectInteraction.reply({ content: "You must have at least one role", ephemeral: true });
+                                await delay(3000);
+                                await warningMsg.delete();
+                                continue;
+                            }
                             return ownerRoles;
                         }
                         if (roleSelectInteraction.customId === "cancel") {
@@ -246,7 +223,6 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
                         }
                     }
                     if (roleSelectInteraction.isStringSelectMenu()) {
-
                         const selectedRole = roleSelectInteraction.values[0];
                         const role = allRoles.find((role) => role.Id.toString() === selectedRole);
                         if (!role) {
@@ -265,26 +241,68 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
                             await roleSelectInteraction.reply({ content: `Role ${role.Name} has been removed`, ephemeral: true });
                             ownerRoles.splice(roleIndex, 1);
                         }
-                        await delay(3000);
-                        await roleMsg.delete();
+                        await delay(2000);
                     }
                 } catch (error) {
                     if (error instanceof CustomError) {
                         throw error;
                     }
                     throw new CustomError("Create project request cancelled", ErrorCode.TimeOut, "Create Project", error as Error);
-                } finally {
-                    if (roleMsg.deletable)
-                        await roleMsg.delete();
                 }
             } while (true);
         } catch (error) {
             console.log(error);
-            
             if (error instanceof CustomError) {
                 throw error;
             }
             throw new CustomError("Create project request cancelled", ErrorCode.TimeOut, "Create Project", error as Error);
+        }
+    }
+
+    async saveToDatabase(value: CreateProjectRequest, project: Project, projectMember: ProjectMember[]) : Promise<void> {
+        const createProjectStatusEmbed = new EmbedBuilder()
+            .setTitle(`Creating project ${project.name}`)
+            .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL() })
+            .setTitle("Saving project to database")
+            .setDescription("***Step 1:*** Adding project to the database...")
+            .setColor("Random")
+            .setFooter({ text: "NekoYuki's manager" })
+            .setTimestamp();
+        const currChannel = value.data.channel as TextChannel;
+        const createProjectStatusMsg = await currChannel.send({ embeds: [createProjectStatusEmbed] });
+        await delay(3000);
+        createProjectStatusEmbed.setDescription(`- ***Step 1:*** Adding project to the database... ***Done***\n- ***Step 2:*** Adding owner roles to the database...`);
+        await createProjectStatusMsg.edit({ content: "", embeds: [createProjectStatusEmbed] });
+        try {
+            projectMember.forEach(async (member) => {
+                await value.data.client.dataSources.getRepository(ProjectMember).save(member);
+            });
+            createProjectStatusEmbed.setDescription(`- ***Step 1:*** Adding project to the database... ***Done***\n- ***Step 2:*** Adding owner roles to the database... ***Done*** - ***Step 3***: Cleaning...`);
+            await createProjectStatusMsg.edit({ content: "", embeds: [createProjectStatusEmbed] });
+            await delay(3000);
+            createProjectStatusEmbed
+                .setTitle("All Done!")
+                .setDescription("✔ Project has been created successfully! Here's your project information. Returning to the project info...")
+                .setColor("Green")
+                .setFooter({ text: "NekoYuki's manager" })
+                .setTimestamp()
+                .setFields([
+                    { name: "Project Name", value: project.name, inline: true },
+                    { name: "Owner", value: value.data.author.displayName, inline: true },
+                    { name: "Owner roles", value: projectMember.map((role) => role.role.Name).join(", "), inline: false }
+                ]);
+            await createProjectStatusMsg.edit({ content: "", embeds: [createProjectStatusEmbed] });
+            await delay(5000);
+            await createProjectStatusMsg.delete();
+            // TODO: send request to project viewer to view the project
+            await value.data.client.mediator.send(new ViewProjectRequest(value.data.client, currChannel, value.data.author, project.id.toString()));
+        } catch (error) {
+            if (error instanceof CustomError) {
+                throw error;
+            }
+            await value.data.client.dataSources.getRepository(Project).delete({ id: project.id });
+            createProjectStatusMsg.delete();
+            throw new CustomError("An error occurred while saving the project, project deleted.", ErrorCode.InternalServerError, "Create Project", error as Error);
         }
     }
 }

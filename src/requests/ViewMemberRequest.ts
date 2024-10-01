@@ -22,7 +22,6 @@ class ViewMemberRequestOptions {
     channel : TextChannel;
     author : User;
     member? : User;
-
     constructor(client: CustomClient, Guild: Guild, channel : TextChannel, author: User, member?: User) {
         this.client = client;
         this.guild = Guild;

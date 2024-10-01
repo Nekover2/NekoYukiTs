@@ -15,7 +15,8 @@ import GeneralRole from "./GeneralRole";
 @Entity()
 export default class Project implements IProject {
     @PrimaryGeneratedColumn()
-    id: number = 0;
+    //@ts-ignore
+    id: number;
 
     @Column()
     name: string = "";

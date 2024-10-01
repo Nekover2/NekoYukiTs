@@ -9,7 +9,6 @@ import CreateChapterRequest from "../requests/CreateChapterRequest";
 import Member from "../base/NekoYuki/entities/Member";
 import Permission from "../base/NekoYuki/enums/Permission";
 
-// TODO: Change global error handling...
 export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRequest> {
     name: string;
     ableToNavigate: boolean;
@@ -20,10 +19,29 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
     }
 
     async handle(value: ViewProjectRequest): Promise<any> {
-        // TODO: add navigation buttons
         try {
             const yukiMember = await value.data.client.dataSources.getRepository(Member).findOne({ where: { discordId: value.data.author.id } });
             if (!yukiMember) throw new CustomError("You are not a member of NekoYuki", ErrorCode.BadRequest, "View Project");
+            if (!value.data.projectId)
+                value.data.projectId = await this.chooseProject(value);
+            await this.viewProject(value, yukiMember);
+            // TODO: add navigation buttons
+            // TODO: rebuild project query
+            // TODO: clean messages after done
+        } catch (error) {
+            if (error instanceof CustomError) {
+                throw error;
+            }
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "View Project", error as Error);
+        }
+    }
+
+    async chooseProject(value: ViewProjectRequest): Promise<string | undefined> {
+        try {
+            const totalProjectsCnt = await value.data.client.dataSources.getRepository(Project).count();
+            if(totalProjectsCnt == 0) {
+                throw new CustomError("No project found", ErrorCode.BadRequest, "Choose Project");
+            }
             const chooseProjectEmbed = new EmbedBuilder()
                 .setTitle("Choose a project")
                 .setTimestamp()
@@ -45,18 +63,26 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                 .setStyle(ButtonStyle.Primary);
             let actionRow = new ActionRowBuilder()
                 .addComponents(navigateLeftBtn, notifyBtn, navigateRightBtn);
-            const projects = await value.data.client.dataSources.getRepository(Project).find();
+
             let i = 0;
             let targetProjectId = "-1";
             while (true) {
+                const projects = await value.data.client.dataSources.getRepository(Project).find({
+                    skip: i,
+                    take: 5
+                });
+                if (i == 0) navigateLeftBtn.setDisabled(true)
+                else navigateLeftBtn.setDisabled(false);
+                if (i == Math.floor(projects.length / 5) * 5 - 1) navigateRightBtn.setDisabled(true)
+                else navigateRightBtn.setDisabled(false);
                 let description = "";
                 let projectOptions = [];
-                for (let j = i; j < i + 5; j++) {
-                    if (projects[i * 5 + j] === undefined) break;
-                    description += `${projects[i * 5 + j].id} - ${projects[i * 5 + j].name}\n`;
+                for (let j = 0; j < 5; j++) {
+                    if (projects[j] === undefined) break;
+                    description += `- ***${projects[j].id}***. ${projects[j].name}\n`;
                     projectOptions.push(new StringSelectMenuOptionBuilder()
-                        .setLabel(projects[i * 5 + j].id.toString())
-                        .setValue(projects[i * 5 + j].id.toString())
+                        .setLabel(projects[j].id.toString())
+                        .setValue(projects[j].id.toString())
                     );
                 }
                 chooseProjectEmbed.setDescription(description);
@@ -67,8 +93,6 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
 
                 let chooseProjectActionRow = new ActionRowBuilder()
                     .addComponents(chooseProjectSelectMenu);
-
-
                 //@ts-ignore
                 const chooseProjectMsg = await value.data.channel.send({ embeds: [chooseProjectEmbed], components: [chooseProjectActionRow, actionRow] });
                 try {
@@ -81,43 +105,67 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                             }
                         } else if (interaction.customId === "navigateRight") {
                             i += 5;
-                            if (i > projects.length / 5) {
+                            if (i > totalProjectsCnt / 5) {
                                 i = Math.floor(projects.length / 5) * 5;
                             }
                         }
                     } else if (interaction.isStringSelectMenu()) {
                         targetProjectId = interaction.values[0];
                         await chooseProjectMsg.delete();
-                        break;
+                        return targetProjectId;
                     }
                     await chooseProjectMsg.delete();
                 } catch (error) {
-                    throw new CustomError("You didn't choose a project in time", ErrorCode.BadRequest, "View Project", error as Error);
+                    await chooseProjectMsg.delete();
                 }
             }
-            if (targetProjectId === "-1") {
-                throw new CustomError("You didn't choose a project", ErrorCode.BadRequest, "View Project");
+        } catch (error) {
+            if (error instanceof CustomError) {
+                throw error;
             }
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Choose Project", error as Error);
+        }
+    }
 
+    async viewProject(value: ViewProjectRequest, yukiMember: Member): Promise<void> {
+        try {
+            /////////////// Step 01: Check if project exists ///////////////
+            if (value.data.projectId === "-1") return;
+            if (!value.data.projectId) return;
             // find project in array
             let project = await value.data.client.dataSources
                 .getRepository(Project)
                 .findOne({
-                    where: { id: Number(targetProjectId) },
-                    relations: ["members", "chapters"]
+                    where: { id: Number(value.data.projectId) },
+                    relations: ["members", "chapters", "members.role", "members.member"]
                 });
 
             if (!project) {
                 throw new CustomError("Project not found", ErrorCode.BadRequest, "View Project");
             }
 
-
-            let projectDescription = "***OWNER***\n";
+            /////////////// Step 02: Build project description ///////////////
+            let projectDescription = "***-----OWNER-----***\n";
             projectDescription += `**<@${project.ownerId}>\n**`;
-            projectDescription += `------Members------\n`;
+            projectDescription += `***------MEMBERS------***\n`;
+            const memberRoles = [
+                { role: "Role name", memberId: "Member ID" }
+            ];
+            memberRoles.pop();
             project.members.forEach(m => {
-                projectDescription += `- <@${m.id}>\n`;
+                const existingMemberIndex = memberRoles.findIndex((mr) => mr.memberId === m.member.discordId);
+                if (existingMemberIndex === -1) {
+                    memberRoles.push({ role: m.role.Name, memberId: m.member.discordId });
+                } else {
+                    memberRoles[existingMemberIndex].role += `, ${m.role.Name}`;
+                }
             });
+            memberRoles.forEach(mr => {
+                projectDescription += `- <@${mr.memberId}> - ${mr.role}\n`;
+            });
+            if (project.members.length == 0) projectDescription += "`[⚠WARNING] No member, request project owner or project manager to add more member`\n";
+
+            /////////////// Step 03: Build project embed ///////////////
             const projectEmbed = new EmbedBuilder()
                 .setAuthor({ name: value.data.author.username, iconURL: value.data.author.displayAvatarURL() })
                 .setTitle(project.name)
@@ -128,7 +176,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                     { name: "Last updated", value: project.lastUpdated.toDateString(), inline: true },
                 ]);
 
-            // TODO: Add navigation btns
+            /////////////// Step 04.01: Build project action row ///////////////
             let hasProjectPermission = false;
             let hasAdvancedProjectPermission = false;
 
@@ -143,12 +191,11 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             if (yukiMember.hasPermission(Permission.UpdateProject)) hasProjectPermission = true;
             if (project.members.find(m => m.member.discordId === yukiMember.discordId)) hasProjectPermission = true;
 
-
-
+            /////////////// Step 04.2: Build project context row ///////////////
             const contextRows = [];
             const createChapterBtn = new ButtonBuilder()
-                .setCustomId("createChapter")
-                .setLabel("Create chapter")
+                .setCustomId("manageChapter")
+                .setLabel("Manage chapter")
                 .setStyle(ButtonStyle.Primary);
             const editProjectBtn = new ButtonBuilder()
                 .setCustomId("editProject")
@@ -159,8 +206,8 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                 .setLabel("Manage member")
                 .setStyle(ButtonStyle.Primary);
             const viewChapterBtn = new ButtonBuilder()
-                .setCustomId("viewChapter")
-                .setLabel("View chapter")
+                .setCustomId("createChapter")
+                .setLabel("Create Chapter")
                 .setStyle(ButtonStyle.Success);
             const deleteProjectBtn = new ButtonBuilder()
                 .setCustomId("deleteProject")
@@ -180,6 +227,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             // @ts-ignore   
             const projectInfoMsg = await value.data.channel.send({ embeds: [projectEmbed], components: contextRows });
 
+            /////////////// Step 05: Handle project interaction ///////////////
             try {
                 const projectInteraction = await projectInfoMsg.awaitMessageComponent({ filter: (interaction) => interaction.user.id === value.data.author.id, time: 60000 });
                 projectInfoMsg.delete();
@@ -189,22 +237,18 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                             const createChapterRequest = new CreateChapterRequest(value.data.client, value.data.channel, yukiMember, project)
                             await value.data.client.mediator.send(createChapterRequest);
                             break;
-
                         default:
                             break;
                     }
                 }
-                if(projectInteraction.isStringSelectMenu()){
-                    
+                if (projectInteraction.isStringSelectMenu()) {
+                    //TODO: add naviation handlers
                 }
-
             } catch (error) {
-                throw new CustomError("Time out", ErrorCode.UserCancelled, "View Project", error as Error);
+                await projectInfoMsg.edit({ components: [] });
             }
-            // TODO: add navigation buttons
-            // TODO: rebuild project query
-            // TODO: clean messages after done
         } catch (error) {
+            console.log(error);
 
             if (error instanceof CustomError) {
                 throw error;

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToOne, JoinColumn, OneToMany } from 'typeorm';
 
 import MemberStatus from "../enums/MemberStatus";
 import Permission from "../enums/Permission";
@@ -15,7 +15,8 @@ export default class ProjectMember implements IProjectMember {
     
 
     @PrimaryGeneratedColumn()
-    id: number = 0;
+    // @ts-ignore
+    id: number;
 
     @ManyToOne(() => Member, member => member.joinedProjects)
     member: IMember = new Member();
@@ -23,7 +24,7 @@ export default class ProjectMember implements IProjectMember {
     @ManyToOne(() => Project, project => project.members)
     project: IProject = new Project();
 
-    @OneToOne(() => GeneralRole)
+    @ManyToOne(() => GeneralRole, generalRole => generalRole.Members)
     @JoinColumn()
     // @ts-ignore
     role: GeneralRole;
