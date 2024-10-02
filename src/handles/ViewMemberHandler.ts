@@ -126,7 +126,6 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
 
             // TODO: add navigation buttons
         } catch (error) {
-            
             if (error instanceof CustomError) {
                 throw error;
             }

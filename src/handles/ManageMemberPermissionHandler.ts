@@ -72,10 +72,7 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
                     permissionSelectInteractionGlobal = permissionSelectInteraction;
                 } catch (error) {
                     throw new CustomError("Failed to manage member permission due to inactive", ErrorCode.TimeOut, "Manage Member Permission", error as Error);
-                } finally {
-                    await permissionDashboardMessage.edit({ content: "", embeds: [permissionDashboardEmbed], components: [] });
                 }
-                await permissionSelectInteractionGlobal.deleteReply();
                 try {
                     await value.data.client.dataSources.getRepository(Member).save(currMember);
                 } catch (error) {
@@ -94,7 +91,6 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
                 }
             } while (true);
         } catch (error) {
-            
             if (error instanceof CustomError) {
                 throw error;
             }

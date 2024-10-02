@@ -92,8 +92,6 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
                 throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Create Chapter", error as Error);
             }
         } catch (error) {
-
-
             if (error instanceof CustomError) {
                 throw error;
             }

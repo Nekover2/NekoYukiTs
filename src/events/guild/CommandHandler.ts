@@ -55,8 +55,7 @@ export default class CommandHandler extends Event {
             const subCommand = `${interaction.commandName}${subCommandGroup ? `.${subCommandGroup}` : ""}.${interaction.options.getSubcommand(false)}`;
             await interaction.deferReply({ ephemeral: true });
             interaction.deleteReply();
-            while (true)
-                await this.client.subCommands.get(subCommand)?.Execute(interaction) || await command.Execute(interaction);
+            await this.client.subCommands.get(subCommand)?.Execute(interaction) || await command.Execute(interaction);
         } catch (error) {
             console.error(error);
             if (error instanceof CustomError) {

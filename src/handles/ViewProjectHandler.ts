@@ -257,6 +257,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                 }
             } catch (error) {
                 await projectInfoMsg.edit({ components: [] });
+                throw new CustomError("Cancelled view project request due to timeout", ErrorCode.UserCancelled, "View Project", error as Error);
             }
             if (!globalBtnInteraction) return;
             const globalBtnInteractionAfter = globalBtnInteraction as ButtonInteraction;
