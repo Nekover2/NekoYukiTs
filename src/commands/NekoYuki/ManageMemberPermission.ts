@@ -30,8 +30,6 @@ export default class CreateMember extends Command {
 
     async Execute(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
-            await interaction.deferReply({ ephemeral: true });
-            await interaction.deleteReply();
             //@ts-ignore
             const manageMemberPermissionRequest = new ManageMemberPermissionRequest(this.client, interaction.channel as TextChannel, interaction.options.getUser("member"), interaction.user);
             const result = await this.client.mediator.send(manageMemberPermissionRequest);

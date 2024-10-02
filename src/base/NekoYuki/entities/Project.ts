@@ -14,6 +14,7 @@ import GeneralRole from "./GeneralRole";
 
 @Entity()
 export default class Project implements IProject {
+    
     @PrimaryGeneratedColumn()
     //@ts-ignore
     id: number;
@@ -45,6 +46,9 @@ export default class Project implements IProject {
     @OneToMany(() => Chapter, chapter => chapter.project)
     //@ts-ignore
     chapters: IChapter[]
+
+    membersCount: number = -1;
+    chaptersCount: number = -1;
     addMember(member: IMember, roles: GeneralRole, permissions: Permission[]): IProjectMember | undefined {
         // find the member in the members array
         const oldMember = this.members.find((m) => m.member.discordId === member.discordId);

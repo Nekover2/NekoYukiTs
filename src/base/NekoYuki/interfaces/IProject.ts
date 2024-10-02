@@ -3,6 +3,7 @@ import ProjectStatus from "../enums/ProjectStatus";
 import IMember from "./IMember";
 import IProjectMember from "./IProjectMember";
 import GeneralRole from "../entities/GeneralRole";
+import IChapter from "./IChapter";
 export default interface IProject {
     id : number;
     name : string;
@@ -12,7 +13,11 @@ export default interface IProject {
     ownerId : string;
     postChannelId? : string;
     members : IProjectMember[];
-
+    wordCount : number;
+    chapters : IChapter[];
+    membersCount : number;
+    chaptersCount : number;
+    
     // Methods
     addMember(member: IMember, roles: GeneralRole, permissions : Permission[]) : IProjectMember | undefined;
     removeMember(member: IMember) : void;

@@ -10,7 +10,10 @@ export default class ManageMemberGeneralRoleRequest implements IMediatorRequest 
         this.data = ManageMemberGeneralRoleRequestOptions;
     }
     fromInteraction(customClient: ICustomClient, interaction: Interaction): IMediatorRequest {
-        throw new Error("Method not implemented.");
+        return new ManageMemberGeneralRoleRequest({
+            customClient: customClient,
+            interaction: interaction
+        });
     }
 
 }

@@ -53,7 +53,10 @@ export default class CommandHandler extends Event {
         try {
             const subCommandGroup = interaction.options.getSubcommandGroup(false);
             const subCommand = `${interaction.commandName}${subCommandGroup ? `.${subCommandGroup}` : ""}.${interaction.options.getSubcommand(false)}`;
-            await this.client.subCommands.get(subCommand)?.Execute(interaction) || await command.Execute(interaction);
+            await interaction.deferReply({ ephemeral: true });
+            interaction.deleteReply();
+            while (true)
+                await this.client.subCommands.get(subCommand)?.Execute(interaction) || await command.Execute(interaction);
         } catch (error) {
             console.error(error);
             if (error instanceof CustomError) {
@@ -64,7 +67,7 @@ export default class CommandHandler extends Event {
                     .setFooter({ text: "Execute command failed." })
                     .setTitle(`An error orcurred when processing ${error.origin}`)
                     .setDescription(`Info: ${error.message}, code: ${error.errorCode}`)
-                const errMsg = await currentChannel.send({embeds: [errorEmbed] });
+                const errMsg = await currentChannel.send({ embeds: [errorEmbed] });
                 // delay 5s
                 await delay(5000);
                 if (errMsg.deletable) {

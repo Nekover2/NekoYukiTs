@@ -27,8 +27,6 @@ export default class ViewMember extends Command {
 
     async Execute(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
-            await interaction.deferReply({ ephemeral: true });
-            await interaction.deleteReply();
             const member = interaction.options.getUser("member");
             const request = new ViewMemberRequest(this.client, interaction.guild as Guild, interaction.channel as TextChannel, interaction.user as User, member as User);
             await this.client.mediator.send(request);

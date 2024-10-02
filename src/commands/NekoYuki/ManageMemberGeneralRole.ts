@@ -28,8 +28,6 @@ export default class CreateMember extends Command {
 
     async Execute(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
-            await interaction.deferReply({ ephemeral: true });
-            await interaction.deleteReply();
             //@ts-ignore
             const result = await this.client.mediator.send(new ManageMemberGeneralRoleRequest({customClient: this.client, interaction: interaction, member: interaction.options.getUser("member")}));
         } catch (error) {

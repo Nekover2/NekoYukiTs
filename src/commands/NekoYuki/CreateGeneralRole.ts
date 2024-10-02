@@ -22,8 +22,6 @@ export default class CreateGeneralRole extends Command {
 
     async Execute(interaction: ChatInputCommandInteraction ): Promise<void> {
         try {
-            await interaction.deferReply({ephemeral: true});
-            await interaction.deleteReply();
             const request = new CreateGeneralRoleRequest({customClient: this.client, interaction: interaction});
             const result = await this.client.mediator.send(request);
         } catch (error) {

@@ -11,7 +11,7 @@ export default class CreateProjectRequest implements IMediatorRequest {
         this.data = new CrateProjectRequestOptions(client, channel, author);
     }
     fromInteraction(customClient: ICustomClient, interaction: Interaction): IMediatorRequest {
-        throw new Error("Method not implemented.");
+        return new CreateProjectRequest(customClient, interaction.channel as TextChannel, interaction.user);
     }
 }
 

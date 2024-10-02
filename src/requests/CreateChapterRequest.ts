@@ -13,7 +13,7 @@ export default class CreateChapterRequest implements IMediatorRequest{
         this.data = new CreateChapterRequestOptions(client, channel, author, project);
     }
     fromInteraction(customClient: ICustomClient, interaction: Interaction): IMediatorRequest {
-        throw new Error("Method not implemented.");
+        throw new Error("You cannot create this request from navigation.");
     }
 }
 

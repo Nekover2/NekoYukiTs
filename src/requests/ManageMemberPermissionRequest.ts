@@ -10,7 +10,7 @@ export default class ManageMemberPermissionRequest implements IMediatorRequest {
         this.data = new ManageMemberPermissionOptions(client, channel, member, author);
     }
     fromInteraction(customClient: ICustomClient, interaction: Interaction): IMediatorRequest {
-        throw new Error("Method not implemented.");
+        return new ManageMemberPermissionRequest(customClient, interaction.channel as TextChannel, interaction.member?.user as User, interaction.user);
     }
 }
 

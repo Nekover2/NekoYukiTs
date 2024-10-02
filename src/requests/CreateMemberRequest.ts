@@ -11,7 +11,7 @@ export default class CreateMemberRequest implements IMediatorRequest {
         this.data = new CreateMemberOptions(client, channel, member, author);
     }
     fromInteraction(customClient: ICustomClient, interaction: Interaction): IMediatorRequest {
-        throw new Error("Method not implemented.");
+        return new CreateMemberRequest(customClient, interaction.channel as TextChannel, interaction.member?.user as User, interaction.user);
     }
 }
 

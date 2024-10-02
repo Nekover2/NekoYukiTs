@@ -1,4 +1,4 @@
-import { ButtonStyle, ComponentType, EmbedBuilder, StringSelectMenuInteraction, StringSelectMenuOptionBuilder, TextInputBuilder } from "discord.js";
+import { ButtonInteraction, ButtonStyle, ComponentType, EmbedBuilder, StringSelectMenuInteraction, StringSelectMenuOptionBuilder, TextInputBuilder } from "discord.js";
 import CustomError from "../base/classes/CustomError";
 import ErrorCode from "../base/enums/ErrorCode";
 import IMediatorHandle from "../base/interfaces/IMediatorHandle";
@@ -8,6 +8,7 @@ import { ActionRowBuilder, ButtonBuilder, SelectMenuBuilder } from "@discordjs/b
 import CreateChapterRequest from "../requests/CreateChapterRequest";
 import Member from "../base/NekoYuki/entities/Member";
 import Permission from "../base/NekoYuki/enums/Permission";
+import ViewProjectChapterRequest from "../requests/ViewProjectChapterRequest";
 
 export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRequest> {
     name: string;
@@ -39,7 +40,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
     async chooseProject(value: ViewProjectRequest): Promise<string | undefined> {
         try {
             const totalProjectsCnt = await value.data.client.dataSources.getRepository(Project).count();
-            if(totalProjectsCnt == 0) {
+            if (totalProjectsCnt == 0) {
                 throw new CustomError("No project found", ErrorCode.BadRequest, "Choose Project");
             }
             const chooseProjectEmbed = new EmbedBuilder()
@@ -97,6 +98,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                 const chooseProjectMsg = await value.data.channel.send({ embeds: [chooseProjectEmbed], components: [chooseProjectActionRow, actionRow] });
                 try {
                     const interaction = await chooseProjectMsg.awaitMessageComponent({ filter: (interaction) => interaction.user.id === value.data.author.id, time: 60000 });
+                    await chooseProjectMsg.delete();
                     if (interaction.isButton()) {
                         if (interaction.customId === "navigateLeft") {
                             i -= 5;
@@ -111,12 +113,11 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                         }
                     } else if (interaction.isStringSelectMenu()) {
                         targetProjectId = interaction.values[0];
-                        await chooseProjectMsg.delete();
                         return targetProjectId;
                     }
-                    await chooseProjectMsg.delete();
                 } catch (error) {
                     await chooseProjectMsg.delete();
+                    return;
                 }
             }
         } catch (error) {
@@ -133,16 +134,30 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             if (value.data.projectId === "-1") return;
             if (!value.data.projectId) return;
             // find project in array
-            let project = await value.data.client.dataSources
-                .getRepository(Project)
-                .findOne({
-                    where: { id: Number(value.data.projectId) },
-                    relations: ["members", "chapters", "members.role", "members.member"]
-                });
-
+            // let project = await value.data.client.dataSources
+            //     .getRepository(Project)
+            //     .findOne({
+            //         where: { id: Number(value.data.projectId) },
+            //         relations: ["members", "chapters", "members.role", "members.member"]
+            //     });
+            let project = await value.data.client.dataSources.getRepository(Project)
+                .createQueryBuilder('project')
+                .where("project.id = :id", { id: value.data.projectId })
+                .leftJoinAndSelect('project.members', 'projectMember')
+                .leftJoinAndSelect('projectMember.role', 'role')
+                .leftJoinAndSelect('projectMember.member', 'member')
+                .leftJoin('project.chapters', 'chapter')
+                .loadRelationCountAndMap("project.chaptersCount", "project.chapters")
+                .getOne();
+            
             if (!project) {
                 throw new CustomError("Project not found", ErrorCode.BadRequest, "View Project");
             }
+            // project.chaptersCount = await value.data.client.dataSources.getRepository(Project)
+            //     .createQueryBuilder('project')
+            //     .where("project.id = :id", { id: value.data.projectId })
+            //     .leftJoin('project.chapters', 'chapter')
+            //     .getCount();
 
             /////////////// Step 02: Build project description ///////////////
             let projectDescription = "***-----OWNER-----***\n";
@@ -172,7 +187,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                 .setDescription(projectDescription)
                 .addFields([
                     { name: "Status", value: project.status.toString(), inline: true },
-                    { name: "Number of chapters", value: project.chapters.length.toString(), inline: true },
+                    { name: "Number of chapters", value: project.chaptersCount.toString(), inline: true },
                     { name: "Last updated", value: project.lastUpdated.toDateString(), inline: true },
                 ]);
 
@@ -194,9 +209,9 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             /////////////// Step 04.2: Build project context row ///////////////
             const contextRows = [];
             const createChapterBtn = new ButtonBuilder()
-                .setCustomId("manageChapter")
-                .setLabel("Manage chapter")
-                .setStyle(ButtonStyle.Primary);
+                .setCustomId("createChapter")
+                .setLabel("Create chapter")
+                .setStyle(ButtonStyle.Success);
             const editProjectBtn = new ButtonBuilder()
                 .setCustomId("editProject")
                 .setLabel("Edit project")
@@ -206,50 +221,66 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                 .setLabel("Manage member")
                 .setStyle(ButtonStyle.Primary);
             const viewChapterBtn = new ButtonBuilder()
-                .setCustomId("createChapter")
-                .setLabel("Create Chapter")
-                .setStyle(ButtonStyle.Success);
+                .setCustomId("viewChapter")
+                .setLabel("View chapter")
+                .setStyle(ButtonStyle.Primary);
             const deleteProjectBtn = new ButtonBuilder()
                 .setCustomId("deleteProject")
                 .setLabel("Delete project")
                 .setStyle(ButtonStyle.Danger);
             const editRow = new ActionRowBuilder()
-                .addComponents(viewChapterBtn);
 
             if (hasProjectPermission) {
-                editRow.addComponents(createChapterBtn, editProjectBtn, manageMemberBtn);
+                viewChapterBtn.setLabel("Manage chapters");
+                editRow.addComponents(createChapterBtn, viewChapterBtn, editProjectBtn, manageMemberBtn);
+            } else {
+                viewChapterBtn.setLabel("View chapters");
+                editRow.setComponents(viewChapterBtn);
             }
             if (hasAdvancedProjectPermission) {
                 editRow.addComponents(deleteProjectBtn);
             }
             contextRows.push(editRow);
-            contextRows.push(value.data.client.navigations);
             // @ts-ignore   
             const projectInfoMsg = await value.data.channel.send({ embeds: [projectEmbed], components: contextRows });
 
             /////////////// Step 05: Handle project interaction ///////////////
+            let globalBtnInteraction = null;
             try {
                 const projectInteraction = await projectInfoMsg.awaitMessageComponent({ filter: (interaction) => interaction.user.id === value.data.author.id, time: 60000 });
-                projectInfoMsg.delete();
+                await projectInfoMsg.delete();
                 if (projectInteraction.isButton()) {
-                    switch (projectInteraction.customId) {
-                        case "createChapter":
-                            const createChapterRequest = new CreateChapterRequest(value.data.client, value.data.channel, yukiMember, project)
-                            await value.data.client.mediator.send(createChapterRequest);
-                            break;
-                        default:
-                            break;
-                    }
+                    globalBtnInteraction = projectInteraction;
                 }
                 if (projectInteraction.isStringSelectMenu()) {
-                    //TODO: add naviation handlers
+                    //TODO: add navigation handlers
                 }
             } catch (error) {
                 await projectInfoMsg.edit({ components: [] });
             }
+            if (!globalBtnInteraction) return;
+            const globalBtnInteractionAfter = globalBtnInteraction as ButtonInteraction;
+            try {
+                switch (globalBtnInteractionAfter.customId) {
+                    case "createChapter":
+                        const createChapterRequest = new CreateChapterRequest(value.data.client, value.data.channel, yukiMember, project)
+                        await value.data.client.mediator.send(createChapterRequest);
+                        break;
+                    case "viewChapter":
+                        const viewProjectChapterRequest = new ViewProjectChapterRequest({ customClient: value.data.client, interaction: globalBtnInteractionAfter, project: project, author: yukiMember });
+                        await value.data.client.mediator.send(viewProjectChapterRequest);
+                        break;
+                    default:
+                        break;
+                }
+            } catch (error) {
+                if (error instanceof CustomError) {
+                    throw error;
+                }
+                throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "View Project", error as Error);
+            }
         } catch (error) {
             console.log(error);
-
             if (error instanceof CustomError) {
                 throw error;
             }

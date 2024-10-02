@@ -11,7 +11,7 @@ export default class ViewProjectRequest implements IMediatorRequest {
         this.data = new ViewProjectRequestOptions(client,channel,author, projectId);
     }
     fromInteraction(customClient: ICustomClient, interaction: Interaction): IMediatorRequest {
-        throw new Error("Method not implemented.");
+        return new ViewProjectRequest(customClient, interaction.channel as TextChannel, interaction.user);
     }
 }
 

@@ -12,7 +12,7 @@ export default class ViewMemberRequest implements IMediatorRequest{
         this.data = new ViewMemberRequestOptions(client, Guild, channel, author, member);
     }
     fromInteraction(customClient: ICustomClient, interaction: Interaction): IMediatorRequest {
-        throw new Error("Method not implemented.");
+        return new ViewMemberRequest(customClient as CustomClient, interaction.guild as Guild, interaction.channel as TextChannel, interaction.user);
     }
 }
 

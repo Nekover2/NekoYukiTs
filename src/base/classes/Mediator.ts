@@ -39,6 +39,7 @@ export default class Mediator implements IMediator {
         });
     }
 
+
     async LoadMediator(requestFolder: string, handlerFolder: string): Promise<void> {
         await this.LoadRequests(requestFolder);
         await this.LoadHandles(handlerFolder);

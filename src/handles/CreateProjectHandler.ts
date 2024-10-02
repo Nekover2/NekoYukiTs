@@ -192,7 +192,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
                 const btnRow = new ActionRowBuilder().addComponents(acceptButton, cancelButton);
 
                 const roleDashboardEmbed = new EmbedBuilder()
-                    .setTitle(`Position Dashboard for ${value.data.author.displayName}`)
+                    .setTitle(`Step 2/2, choose role for ${value.data.author.displayName}`)
                     .setDescription(`After choose your name, you need to specify your role in project ${project.name}\n. Note that:` +
                         "\n- 1. You can only have many roles in a project" +
                         "\n- 2. Picking an existing role will remove it" +
@@ -244,6 +244,9 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
                         await delay(2000);
                     }
                 } catch (error) {
+                    await value.data.client.dataSources.getRepository(Project).delete({
+                        id: project.id
+                    });
                     if (error instanceof CustomError) {
                         throw error;
                     }

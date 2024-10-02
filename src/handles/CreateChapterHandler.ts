@@ -19,7 +19,6 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
     async handle(value: CreateChapterRequest): Promise<any> {
         const sentMsgs: Array<Message> = [];
         try {
-
             // STEP 1: Check if author has permissions
             let permissionFlag = true;
             const currProject = await value.data.client.dataSources.getRepository(Project).findOne({
@@ -41,7 +40,6 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
             value.data.client.nekoYukiEvent.emit("ChapterCreated", newChapter);
             return;
         } catch (error) {
-
             if (error instanceof CustomError) {
                 throw error;
             }

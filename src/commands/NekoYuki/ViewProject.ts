@@ -22,9 +22,6 @@ export default class ViewProject extends Command {
     }
     async Execute(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
-            await interaction.deferReply({ ephemeral: true });
-            await interaction.deleteReply();
-
             const author = interaction.user;
             await this.client.mediator.send(new ViewProjectRequest(this.client, interaction.channel as TextChannel, author));
         } catch (error) {

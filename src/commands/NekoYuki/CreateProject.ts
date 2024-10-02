@@ -21,8 +21,6 @@ export default class CreateProject extends Command {
 
     async Execute(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
-            await interaction.deferReply({ ephemeral: true });
-            await interaction.deleteReply();
             //@ts-ignore
             const createProjectRequest = new CreateProjectRequest(this.client, interaction.channel as TextChannel, interaction.user);
             const result = await this.client.mediator.send(createProjectRequest);

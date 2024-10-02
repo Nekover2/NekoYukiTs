@@ -6,21 +6,17 @@ import IMediatorRequest from "../base/interfaces/IMediatorRequest";
 import IMediator from "../base/interfaces/IMediator";
 import ICustomClient from "../base/interfaces/ICustomClient";
 export default class NavigationUtil {
-    static async GetNavigationList(handlerPath: string): Promise<ActionRowBuilder> {
+    static async GetNavigationList(mediator: IMediator): Promise<ActionRowBuilder> {
+        const nv = mediator.handles.filter((h) => h.ableToNavigate === true);
         const navigations = new ActionRowBuilder();
-        const handler = (await glob(handlerPath)).map((file) => path.resolve(file));
         const navigationRow = new StringSelectMenuBuilder()
             .setCustomId("navigationSelect")
             .setPlaceholder("Select a navigation");
-        handler.map(async (file: string) => {
-            const navigation: IMediatorHandle<IMediatorRequest> = new (await import(file)).default(this);
-            if (navigation.ableToNavigate === true) {
-                const selectMenu = new StringSelectMenuOptionBuilder()
-                    .setLabel(navigation.name)
-                    .setValue(navigation.name);
-                navigationRow.addOptions(selectMenu);
-            }
-            return delete require.cache[require.resolve(file)];
+        nv.forEach((n) => {
+            const option = new StringSelectMenuOptionBuilder()
+                .setLabel(n.name)
+                .setValue(n.name);
+            navigationRow.addOptions(option);
         });
         navigations.addComponents(navigationRow);
         return navigations;
