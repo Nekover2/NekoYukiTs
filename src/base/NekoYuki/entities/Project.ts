@@ -38,6 +38,9 @@ export default class Project implements IProject {
 
     @Column()
     wordCount: number = 0;
+
+    @Column()
+    verified: boolean = false;
     
     @OneToMany(() => ProjectMember, projectMember => projectMember.project)
     // @ts-ignore
@@ -46,6 +49,7 @@ export default class Project implements IProject {
     @OneToMany(() => Chapter, chapter => chapter.project)
     //@ts-ignore
     chapters: IChapter[]
+
 
     membersCount: number = -1;
     chaptersCount: number = -1;

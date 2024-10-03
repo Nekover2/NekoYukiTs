@@ -1,27 +1,27 @@
 import { Interaction, TextChannel, User } from "discord.js";
-import ICustomClient from "../base/interfaces/ICustomClient";
 import IMediatorRequest from "../base/interfaces/IMediatorRequest";
+import CustomClient from "../base/classes/CustomClient";
 
 export default class ViewProjectRequest implements IMediatorRequest {
     name: string;
     data: ViewProjectRequestOptions;
 
-    constructor(client: ICustomClient, channel: TextChannel, author: User, projectId?: string) {
+    constructor(client: CustomClient, channel: TextChannel, author: User, projectId?: string) {
         this.name = "ViewProject";
         this.data = new ViewProjectRequestOptions(client,channel,author, projectId);
     }
-    fromInteraction(customClient: ICustomClient, interaction: Interaction): IMediatorRequest {
+    fromInteraction(customClient: CustomClient, interaction: Interaction): IMediatorRequest {
         return new ViewProjectRequest(customClient, interaction.channel as TextChannel, interaction.user);
     }
 }
 
 
 class ViewProjectRequestOptions {
-    client: ICustomClient;
+    client: CustomClient;
     author: User;
     channel: TextChannel;
     projectId?: string;
-    constructor(client: ICustomClient,channel: TextChannel, author: User, projectId?: string) {
+    constructor(client: CustomClient,channel: TextChannel, author: User, projectId?: string) {
         this.client = client;
         this.author = author;
         this.channel = channel;

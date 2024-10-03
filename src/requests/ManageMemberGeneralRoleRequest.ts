@@ -1,5 +1,5 @@
 import { Interaction, User } from "discord.js";
-import ICustomClient from "../base/interfaces/ICustomClient";
+import CustomClient from "../base/classes/CustomClient";
 import IMediatorRequest from "../base/interfaces/IMediatorRequest";
 
 export default class ManageMemberGeneralRoleRequest implements IMediatorRequest {
@@ -9,7 +9,7 @@ export default class ManageMemberGeneralRoleRequest implements IMediatorRequest 
         this.name = "ManageMemberGeneralRole";
         this.data = ManageMemberGeneralRoleRequestOptions;
     }
-    fromInteraction(customClient: ICustomClient, interaction: Interaction): IMediatorRequest {
+    fromInteraction(customClient: CustomClient, interaction: Interaction): IMediatorRequest {
         return new ManageMemberGeneralRoleRequest({
             customClient: customClient,
             interaction: interaction
@@ -19,10 +19,10 @@ export default class ManageMemberGeneralRoleRequest implements IMediatorRequest 
 }
 
 class ManageMemberGeneralRoleRequestOptions {
-    customClient: ICustomClient;
+    customClient: CustomClient;
     interaction: Interaction;
     member? : User;
-    constructor(customClient: ICustomClient, interaction: Interaction, member?: User) {
+    constructor(customClient: CustomClient, interaction: Interaction, member?: User) {
         this.customClient = customClient;
         this.interaction = interaction;
         this.member = member;

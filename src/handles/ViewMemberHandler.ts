@@ -1,10 +1,11 @@
-import { Message, User, EmbedBuilder, UserSelectMenuBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Interaction } from "discord.js";
+import { Message, User, EmbedBuilder, UserSelectMenuBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Interaction, ComponentType } from "discord.js";
 import IMediatorHandle from "../base/interfaces/IMediatorHandle";
 import ViewMemberRequest from "../requests/ViewMemberRequest";
 import ErrorCode from "../base/enums/ErrorCode";
 import CustomError from "../base/classes/CustomError";
 import Member from "../base/NekoYuki/entities/Member";
 import { PermissionHelper } from "../base/NekoYuki/enums/Permission";
+import ViewMemberProjectRequest from "../requests/ViewMemberProjectRequest";
 
 export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequest> {
     name: string;
@@ -38,6 +39,7 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
             });
         }
     }
+
     async clearAllMessages(sentMsg: Array<Message>): Promise<void> {
         sentMsg.forEach(async msg => {
             if (msg.deletable) {
@@ -122,16 +124,47 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
                 ])
                 .setFooter({ text: "Powered by NekoYuki" })
                 .setTimestamp();
-            const memberEmbedMessage = await value.data.channel.send({ embeds: [memberEmbed] });
 
             // TODO: add navigation buttons
+            const viewProjectStatisticBtn = new ButtonBuilder()
+                .setCustomId("viewProjectStatistic")
+                .setLabel("View project statistic")
+                .setStyle(ButtonStyle.Primary);
+            const editMemberBtn = new ButtonBuilder()
+                .setCustomId("editMember")
+                .setLabel("Edit member")
+                .setStyle(ButtonStyle.Primary);
+            const actionRow = new ActionRowBuilder()
+                .addComponents(viewProjectStatisticBtn, editMemberBtn);
+
+            // @ts-ignore
+            const memberEmbedMessage = await value.data.channel.send({ embeds: [memberEmbed], components: [actionRow] });
+
+            let userReacion = "-1";
+            try {
+                const filter = (interaction: Interaction) => interaction.user.id === value.data.author.id;
+                const memberInteraction = await value.data.channel.awaitMessageComponent({ filter, time: 60000, componentType: ComponentType.Button });
+                memberEmbedMessage.delete();
+                userReacion = memberInteraction.customId;
+            } catch (error) {
+                memberEmbedMessage.edit({ components: [] });
+            }
+            switch (userReacion) {
+                case "viewProjectStatistic":
+                    const viewMemberProjectRequest = new ViewMemberProjectRequest(value.data.client, value.data.channel, value.data.author, yukiMember, member);
+                    await value.data.client.mediator.send(viewMemberProjectRequest);
+                    break;
+                case "editMember":
+                    break;
+                default:
+                    break;
+            }
         } catch (error) {
             if (error instanceof CustomError) {
                 throw error;
             }
             throw new CustomError("An ***unknown*** error when receiving interaction", ErrorCode.Forbidden, "view-member");
-        } finally {
-            await this.clearAllMessages(sentMsg);
         }
     }
+    async editMember(value: ViewMemberRequest, member: User, sentMsg: Array<Message>): Promise<void> { }
 }

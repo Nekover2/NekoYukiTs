@@ -1,9 +1,9 @@
-import ICustomClient from "../base/interfaces/ICustomClient";
+import CustomClient from "../base/classes/CustomClient";
 import NekoYukiEvent from "../base/NekoYuki/classes/NekoYukiEvent";
 import IChapter from "../base/NekoYuki/interfaces/IChapter";
 
 export default class ChapterCreated extends NekoYukiEvent {
-    constructor(client: ICustomClient) {
+    constructor(client: CustomClient) {
         super(client, {
             Name: "ChapterCreated",
             Description: "Fires when a chapter is created",

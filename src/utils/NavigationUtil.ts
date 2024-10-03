@@ -1,10 +1,6 @@
 import { ActionRowBuilder, Interaction, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from "discord.js";
-import { glob } from "glob";
-import path from "path";
-import IMediatorHandle from "../base/interfaces/IMediatorHandle";
-import IMediatorRequest from "../base/interfaces/IMediatorRequest";
 import IMediator from "../base/interfaces/IMediator";
-import ICustomClient from "../base/interfaces/ICustomClient";
+import CustomClient from "../base/interfaces/ICustomClient";
 export default class NavigationUtil {
     static async GetNavigationList(mediator: IMediator): Promise<ActionRowBuilder> {
         const nv = mediator.handles.filter((h) => h.ableToNavigate === true);
@@ -22,7 +18,7 @@ export default class NavigationUtil {
         return navigations;
     }
 
-    static async HandleNavigation(value: string, customClient : ICustomClient, interaction: Interaction, mediator : IMediator) : Promise<void> {
+    static async HandleNavigation(value: string, customClient : CustomClient, interaction: Interaction, mediator : IMediator) : Promise<void> {
         const requestObject  = mediator.requests.find((r) => r.name === value);
         const request = requestObject?.fromInteraction(customClient, interaction);
         if(request) {

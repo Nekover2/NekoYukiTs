@@ -12,8 +12,6 @@ import GeneralRole from './GeneralRole';
 // TODO: Add builder pattern to this class
 @Entity()
 export default class ProjectMember implements IProjectMember {
-    
-
     @PrimaryGeneratedColumn()
     // @ts-ignore
     id: number;

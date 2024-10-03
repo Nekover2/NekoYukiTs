@@ -6,5 +6,5 @@ export default class NotificationConfig {
     // @ts-ignore
     generalRole: GeneralRole;
     createdAt: Date = new Date();
-    action: string = "";
+    eventName: NekoYukiEvent = NekoYukiEvent.None;
 }

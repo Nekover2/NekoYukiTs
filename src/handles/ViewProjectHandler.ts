@@ -1,4 +1,4 @@
-import { ButtonInteraction, ButtonStyle, ComponentType, EmbedBuilder, StringSelectMenuInteraction, StringSelectMenuOptionBuilder, TextInputBuilder } from "discord.js";
+import { ButtonInteraction, ButtonStyle, ComponentType, EmbedBuilder, Interaction, StringSelectMenuInteraction, StringSelectMenuOptionBuilder, TextChannel, TextInputBuilder, User } from "discord.js";
 import CustomError from "../base/classes/CustomError";
 import ErrorCode from "../base/enums/ErrorCode";
 import IMediatorHandle from "../base/interfaces/IMediatorHandle";
@@ -9,6 +9,7 @@ import CreateChapterRequest from "../requests/CreateChapterRequest";
 import Member from "../base/NekoYuki/entities/Member";
 import Permission from "../base/NekoYuki/enums/Permission";
 import ViewProjectChapterRequest from "../requests/ViewProjectChapterRequest";
+import CustomClient from "../base/classes/CustomClient";
 
 export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRequest> {
     name: string;
@@ -24,8 +25,9 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             const yukiMember = await value.data.client.dataSources.getRepository(Member).findOne({ where: { discordId: value.data.author.id } });
             if (!yukiMember) throw new CustomError("You are not a member of NekoYuki", ErrorCode.BadRequest, "View Project");
             if (!value.data.projectId)
-                value.data.projectId = await this.chooseProject(value);
-            await this.viewProject(value, yukiMember);
+                value.data.projectId = await ViewProjectHandler.chooseProject(value);
+            if(!value.data.projectId) return;
+            await ViewProjectHandler.viewProject(value.data.client, value.data.channel, value.data.author, yukiMember, value.data.projectId);
             // TODO: add navigation buttons
             // TODO: rebuild project query
             // TODO: clean messages after done
@@ -37,7 +39,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
         }
     }
 
-    async chooseProject(value: ViewProjectRequest): Promise<string | undefined> {
+    static async chooseProject(value: ViewProjectRequest): Promise<string | undefined> {
         try {
             const totalProjectsCnt = await value.data.client.dataSources.getRepository(Project).count();
             if (totalProjectsCnt == 0) {
@@ -128,11 +130,11 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
         }
     }
 
-    async viewProject(value: ViewProjectRequest, yukiMember: Member): Promise<void> {
+    static async viewProject(client: CustomClient, currChannel: TextChannel, author: User, yukiMember: Member, projectId: string): Promise<boolean> {
         try {
             /////////////// Step 01: Check if project exists ///////////////
-            if (value.data.projectId === "-1") return;
-            if (!value.data.projectId) return;
+            if (projectId === "-1") return false;
+            if (!projectId) return false;
             // find project in array
             // let project = await value.data.client.dataSources
             //     .getRepository(Project)
@@ -140,9 +142,9 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             //         where: { id: Number(value.data.projectId) },
             //         relations: ["members", "chapters", "members.role", "members.member"]
             //     });
-            let project = await value.data.client.dataSources.getRepository(Project)
+            let project = await client.dataSources.getRepository(Project)
                 .createQueryBuilder('project')
-                .where("project.id = :id", { id: value.data.projectId })
+                .where("project.id = :id", { id:projectId })
                 .leftJoinAndSelect('project.members', 'projectMember')
                 .leftJoinAndSelect('projectMember.role', 'role')
                 .leftJoinAndSelect('projectMember.member', 'member')
@@ -182,7 +184,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
 
             /////////////// Step 03: Build project embed ///////////////
             const projectEmbed = new EmbedBuilder()
-                .setAuthor({ name: value.data.author.username, iconURL: value.data.author.displayAvatarURL() })
+                .setAuthor({ name: author.username, iconURL: author.displayAvatarURL() })
                 .setTitle(project.name)
                 .setDescription(projectDescription)
                 .addFields([
@@ -242,12 +244,12 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             }
             contextRows.push(editRow);
             // @ts-ignore   
-            const projectInfoMsg = await value.data.channel.send({ embeds: [projectEmbed], components: contextRows });
+            const projectInfoMsg = await currChannel.send({ embeds: [projectEmbed], components: contextRows });
 
             /////////////// Step 05: Handle project interaction ///////////////
             let globalBtnInteraction = null;
             try {
-                const projectInteraction = await projectInfoMsg.awaitMessageComponent({ filter: (interaction) => interaction.user.id === value.data.author.id, time: 60000 });
+                const projectInteraction = await projectInfoMsg.awaitMessageComponent({ filter: (interaction : Interaction) => interaction.user.id === author.id, time: 60000 });
                 await projectInfoMsg.delete();
                 if (projectInteraction.isButton()) {
                     globalBtnInteraction = projectInteraction;
@@ -257,19 +259,19 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                 }
             } catch (error) {
                 await projectInfoMsg.edit({ components: [] });
-                throw new CustomError("Cancelled view project request due to timeout", ErrorCode.UserCancelled, "View Project", error as Error);
+                return false;
             }
-            if (!globalBtnInteraction) return;
+            if (!globalBtnInteraction) return false;
             const globalBtnInteractionAfter = globalBtnInteraction as ButtonInteraction;
             try {
                 switch (globalBtnInteractionAfter.customId) {
                     case "createChapter":
-                        const createChapterRequest = new CreateChapterRequest(value.data.client, value.data.channel, yukiMember, project)
-                        await value.data.client.mediator.send(createChapterRequest);
+                        const createChapterRequest = new CreateChapterRequest(client, currChannel, yukiMember, project)
+                        await client.mediator.send(createChapterRequest);
                         break;
                     case "viewChapter":
-                        const viewProjectChapterRequest = new ViewProjectChapterRequest({ customClient: value.data.client, interaction: globalBtnInteractionAfter, project: project, author: yukiMember });
-                        await value.data.client.mediator.send(viewProjectChapterRequest);
+                        const viewProjectChapterRequest = new ViewProjectChapterRequest({ customClient: client, interaction: globalBtnInteractionAfter, project: project, author: yukiMember });
+                        await client.mediator.send(viewProjectChapterRequest);
                         break;
                     default:
                         break;
@@ -280,6 +282,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                 }
                 throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "View Project", error as Error);
             }
+            return true;
         } catch (error) {
             console.log(error);
             if (error instanceof CustomError) {
@@ -287,5 +290,15 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             }
             throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "View Project", error as Error);
         }
+    }
+
+    static async editProject(value : ViewProjectRequest, project: Project) : Promise<void> {
+        
+    }
+
+    static async deleteProject(value : ViewProjectRequest, project: Project) : Promise<void> {
+    }
+
+    static async manageMember(value : ViewProjectRequest, project: Project) : Promise<void> {
     }
 }
