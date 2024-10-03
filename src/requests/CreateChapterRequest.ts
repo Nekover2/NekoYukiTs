@@ -8,9 +8,9 @@ export default class CreateChapterRequest implements IMediatorRequest{
     name: string;
     data: CreateChapterRequestOptions;
 
-    constructor(client: CustomClient, channel: TextChannel, author: IMember, project: IProject) {
+    constructor(client: CustomClient, channel: TextChannel, author: User, authorMember: IMember, project: IProject, targetUser?: User, targetMember?: IMember) {
         this.name = "CreateChapter";
-        this.data = new CreateChapterRequestOptions(client, channel, author, project);
+        this.data = new CreateChapterRequestOptions(client, channel, author, authorMember, project, targetUser, targetMember);
     }
     fromInteraction(customClient: CustomClient, interaction: Interaction): IMediatorRequest {
         throw new Error("You cannot create this request from navigation.");
@@ -21,13 +21,17 @@ export default class CreateChapterRequest implements IMediatorRequest{
 class CreateChapterRequestOptions {
     client: CustomClient;
     channel: TextChannel;
-    author: IMember;
+    author: User;
+    authorMember: IMember;
+    targetUser? : User;
+    targerMember?: IMember;
     project: IProject;
 
-    constructor(client: CustomClient, channel: TextChannel, author: IMember, project: IProject) {
+    constructor(client: CustomClient, channel: TextChannel, author: User, authorMember: IMember, project: IProject, targetUser?: User, targetMember?: IMember) {
         this.client = client;
         this.channel = channel;
         this.author = author;
+        this.authorMember = authorMember;
         this.project = project;
     }
 }

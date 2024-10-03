@@ -29,14 +29,14 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
             //     throw new CustomError("Member is already registered", ErrorCode.UserAlreadyExists, "Create Member");
 
             const newMember = new Member();
-            newMember.discordId = value.data.member.id;
+            newMember.discordId = value.data.targetUser.id;
             let infoBtnInteraction : ButtonInteraction = await this.sendInfo(value);
             
             const gmail = await this.getInformation(infoBtnInteraction as ButtonInteraction);
             newMember.gmail = gmail as string;
 
             const createMemberStatusEmbed = new EmbedBuilder()
-                .setTitle(`Registering member ${value.data.member.displayName}`)
+                .setTitle(`Registering member ${value.data.targetUser.displayName}`)
                 .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL() })
                 .setDescription("***Step 1:*** Adding member to the database...")
                 .setColor("Random")
@@ -50,7 +50,6 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
             await infoBtnInteraction.deleteReply();
             return newMember;
         } catch (error) {
-            
             if (error instanceof CustomError) {
                 throw error;
             } else {
@@ -62,7 +61,7 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
 
     async sendInfo(value: CreateMemberRequest): Promise<ButtonInteraction> {
         const infoEmbed = new EmbedBuilder()
-            .setTitle(`You are registering member ${value.data.member.displayName}`)
+            .setTitle(`You are registering member ${value.data.targetUser.displayName}`)
             .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL() })
             .setColor("Random")
             .setFooter({ text: "NekoYuki's manager" })

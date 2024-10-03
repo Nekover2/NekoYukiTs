@@ -1,10 +1,11 @@
-import { ChatInputCommandInteraction, PermissionsBitField } from "discord.js";
+import { ChatInputCommandInteraction, PermissionsBitField, TextChannel } from "discord.js";
 import Command from "../../base/classes/Command";
 import CustomClient from "../../base/classes/CustomClient";
 import Category from "../../base/enums/Category";
 import CustomError from "../../base/classes/CustomError";
 import ErrorCode from "../../base/enums/ErrorCode";
 import CreateProjectRequest from "../../requests/CreateProjectRequest";
+import Member from "../../base/NekoYuki/entities/Member";
 export default class CreateProject extends Command {
     constructor(client : CustomClient) {
         super(client, {
@@ -19,10 +20,10 @@ export default class CreateProject extends Command {
         });
     }
 
-    async Execute(interaction: ChatInputCommandInteraction): Promise<void> {
+    async Execute(interaction: ChatInputCommandInteraction, authorMember : Member): Promise<void> {
         try {
             //@ts-ignore
-            const createProjectRequest = new CreateProjectRequest(this.client, interaction.channel as TextChannel, interaction.user);
+            const createProjectRequest = new CreateProjectRequest(this.client, interaction.channel as TextChannel, interaction.user, authorMember);
             const result = await this.client.mediator.send(createProjectRequest);
         } catch (error) {
             if(error instanceof CustomError) {

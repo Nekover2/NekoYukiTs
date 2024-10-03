@@ -32,16 +32,18 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
 
             // Step 2: send prompt to get project information
             const infoInteraction = await this.sendInfo(value, messageList);
-            console.log("Done sending info");
             // Step 3: get project information
             const projectInfoInput = await this.getBasicInformation(infoInteraction, messageList);
-            console.log("Done getting basic info");
+
+            // Side step: check if project with the same name exists
             const projectWithSameName = await value.data.client.dataSources.getRepository(Project).findOne({
                 where: { name: projectInfoInput.name }
             });
             if (projectWithSameName) {
                 throw new CustomError("Project with the same name already exists", ErrorCode.BadRequest, "Create Project");
             }
+
+            // Step 3.5: save project to database
             let newProject = new Project();
             newProject.name = projectInfoInput.name;
             newProject.ownerId = authorMember.discordId;
@@ -60,7 +62,6 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
 
             // Step 4: Get owner roles
             let ownerRoles = await this.getOwnerRoles(value, savedProject, messageList);
-            console.log("Done getting owner roles");
 
             // Step 5: save to database
             await this.saveToDatabase(value, savedProject, ownerRoles);
@@ -280,7 +281,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
             projectMember.forEach(async (member) => {
                 await value.data.client.dataSources.getRepository(ProjectMember).save(member);
             });
-            createProjectStatusEmbed.setDescription(`- ***Step 1:*** Adding project to the database... ***Done***\n- ***Step 2:*** Adding owner roles to the database... ***Done*** - ***Step 3***: Cleaning...`);
+            createProjectStatusEmbed.setDescription(`- ***Step 1:*** Adding project to the database... ***Done***\n- ***Step 2:*** Adding owner roles to the database... ***Done***\n- ***Step 3***: Cleaning...`);
             await createProjectStatusMsg.edit({ content: "", embeds: [createProjectStatusEmbed] });
             await delay(3000);
             createProjectStatusEmbed
@@ -298,7 +299,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
             await delay(5000);
             await createProjectStatusMsg.delete();
             // TODO: send request to project viewer to view the project
-            await value.data.client.mediator.send(new ViewProjectRequest(value.data.client, currChannel, value.data.author, project.id.toString()));
+            await value.data.client.mediator.send(new ViewProjectRequest(value.data.client, value.data.channel, value.data.author, value.data.authorMember, project.id.toString()));
         } catch (error) {
             if (error instanceof CustomError) {
                 throw error;

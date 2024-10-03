@@ -15,23 +15,23 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
         this.name = "ManageMemberPermission";
         this.ableToNavigate = false;
     }
-
     async handle(value: ManageMemberPermissionRequest): Promise<any> {
         try {
             const permissionDashboardMessage = await value.data.channel.send("Permission Dashboard is loading...");
             do {
                 const currMember = await value.data.client.dataSources.getRepository(Member).findOne({
-                    where: { discordId: value.data.author.id }
+                    where: { discordId: value.data.targetUser?.id }
                 });
                 if (!currMember)
-                    throw new CustomError("Author is not a member", ErrorCode.UserCannotBeFound, this.name);
+                    throw new CustomError("Member is not registered", ErrorCode.UserCannotBeFound, this.name);
 
                 let permissionString = currMember.permissionString().map((p) => p).join(", ");
                 if (permissionString.length === 0) {
                     permissionString = "No permission";
                 }
+
                 const permissionDashboardEmbed = new EmbedBuilder()
-                    .setTitle(`Permission Dashboard for ${value.data.member.displayName}`)
+                    .setTitle(`Permission Dashboard for ${value.data.targetUser?.username}`)
                     .setDescription("This is a permission dashboard for the member you selected, you can manage their permissions here. You can change their permissions by picking permissions input below. Note that, pick an existing permission will remove it, and pick a non-existing permission will add it.")
                     .setColor("Random")
                     .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL() })
@@ -41,7 +41,6 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
 
                 const permissionLabel = Object.keys(Permission).filter((p) => isNaN(Number(p)));
                 const permissionValue = Object.values(Permission).filter((p) => !isNaN(Number(p)));
-
                 const permissionSelect = new StringSelectMenuBuilder()
                     .setCustomId("permissionSelect")
                     .setPlaceholder("Select a permission")

@@ -27,25 +27,18 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
 
     async chooseMember(value: ManageMemberGeneralRoleRequest): Promise<Member> {
         try {
-            if (value.data.member) {
+            if (value.data.targetUser) {
                 const existingMember = await value.data.customClient.dataSources.getRepository(Member).findOne({
-                    where: { discordId: value.data.member.id },
+                    where: { discordId: value.data.targetUser.id },
                     relations: ["generalRoles"]
                 });
                 if (!existingMember) {
                     throw new CustomError("Member not found", ErrorCode.UserCannotBeFound, "Manage Member General Role");
                 }
-
                 return existingMember;
             }
-
-            const existingMember = await value.data.customClient.dataSources.getRepository(Member).findOne({
-                where: { discordId: value.data.interaction.user.id },
-                relations: ["generalRoles"]
-            });
-
             const chooseMemberEmbed = new EmbedBuilder()
-                .setAuthor({ name: value.data.interaction.user.username, iconURL: value.data.interaction.user.displayAvatarURL() })
+                .setAuthor({ name: value.data.author.username, iconURL: value.data.author.displayAvatarURL() })
                 .setColor("Blue")
                 .setTitle("Choose a member")
                 .setTimestamp()
@@ -56,13 +49,11 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
                 .setMaxValues(1)
                 .setPlaceholder("Select a member");
             const userRow = new ActionRowBuilder().addComponents(userSelect);
-
-            const currChannel = value.data.interaction.channel as TextChannel;
             // @ts-ignore
             const chooseUserMsg = await currChannel.send({ embeds: [chooseMemberEmbed], components: [userRow] });
 
             try {
-                const userFilter = (interaction: Interaction) => interaction.user.id === value.data.interaction.user.id;
+                const userFilter = (interaction: Interaction) => interaction.user.id === value.data.author.id;
                 const userSelectInteraction = await chooseUserMsg.awaitMessageComponent({ filter: userFilter, time: 60000, componentType: ComponentType.UserSelect });
                 chooseUserMsg.delete();
                 const selectedUser = userSelectInteraction.users.first();
@@ -90,22 +81,19 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
         }
     }
 
-    async manageMemberGeneralRole(value: ManageMemberGeneralRoleRequest, member: Member): Promise<void> {
+    async manageMemberGeneralRole(value: ManageMemberGeneralRoleRequest, targetMember: Member): Promise<void> {
         try {
+            const currMember = Object.assign({}, targetMember);
             const roleList = await value.data.customClient.dataSources.getRepository(GeneralRole).find();
-            const currMember = await value.data.customClient.dataSources.getRepository(Member).findOne({
-                where: { discordId: member.discordId },
-                relations: ["generalRoles"]
-            });
             if (!currMember) {
                 throw new CustomError("Member not found", ErrorCode.UserCannotBeFound, "Manage Member General Role");
             }
             do {
                 const chooseRoleEmbed = new EmbedBuilder()
-                    .setAuthor({ name: value.data.interaction.user.username, iconURL: value.data.interaction.user.displayAvatarURL() })
+                    .setAuthor({ name: value.data.author.username, iconURL: value.data.author.displayAvatarURL() })
                     .setColor("Blue")
                     .setTitle(`General Role Management`)
-                    .setDescription(`This is general role mangager for <@${member.discordId}>.\n` +
+                    .setDescription(`This is general role mangager for <@${targetMember.discordId}>.\n` +
                         `Note that:\n` +
                         `- 1. Choose an **existing role** will **remove** the role from the member.\n` +
                         `- 2. Choose a **new role** will **add** the role to the member.\n` +
@@ -114,7 +102,7 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
                         `- 5. You can finish this operation by clicking the ***finish*** button.\n`)
                     .setTimestamp()
                     .addFields([
-                        { name: "Old Roles", value: member.generalRoles.map(role => role.role.Name).join(", ") || "No Role" },
+                        { name: "Old Roles", value: targetMember.generalRoles.map(role => role.role.Name).join(", ") || "No Role" },
                         { name: "Current Roles", value: currMember.generalRoles.map(role => role.role.Name).join(", ") || "No Role" },
                     ])
                     .setFooter({ text: "Powered by NekoYuki" });
@@ -140,32 +128,31 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
                         };
                     }));
                 const roleRow = new ActionRowBuilder().addComponents(roleSelect);
-                const currChannel = value.data.interaction.channel as TextChannel;
 
                 // @ts-ignore
                 const chooseRoleMsg = await currChannel.send({ embeds: [chooseRoleEmbed], components: [roleRow, btnRow] });
 
                 try {
-                    const roleFilter = (interaction: Interaction) => interaction.user.id === value.data.interaction.user.id;
+                    const roleFilter = (interaction: Interaction) => interaction.user.id === value.data.author.id;
                     const roleSelectInteraction = await chooseRoleMsg.awaitMessageComponent({ filter: roleFilter, time: 60000 });
                     chooseRoleMsg.delete();
                     if (roleSelectInteraction.isButton()) {
                         if (roleSelectInteraction.customId === "finish") {
-                            await value.data.customClient.dataSources.getRepository(Member).save(member);
+                            await value.data.customClient.dataSources.getRepository(Member).save(currMember);
                             for (const role of currMember.generalRoles) {
                                 await value.data.customClient.dataSources.getRepository(MemberGeneralRole).save(role);
                             }
                             const finishEmbed = new EmbedBuilder()
-                                .setAuthor({ name: value.data.interaction.user.username, iconURL: value.data.interaction.user.displayAvatarURL() })
+                                .setAuthor({ name: value.data.author.username, iconURL: value.data.author.displayAvatarURL() })
                                 .setColor("Green")
                                 .setTitle("General Role Management")
-                                .setDescription(`Successfully managed general role for <@${member.discordId}>.`)
+                                .setDescription(`Successfully managed general role for <@${currMember.discordId}>.`)
                                 .addFields([
                                     { name: "Current Roles", value: currMember.generalRoles.map(role => role.role.Name).join(", ") || "No Role" }
                                 ])
                                 .setTimestamp()
                                 .setFooter({ text: "Powered by NekoYuki" });
-                            let resultMsg = await currChannel.send({ embeds: [finishEmbed] });
+                            let resultMsg = await value.data.channel.send({ embeds: [finishEmbed] });
                             await delay(5000);
                             if (resultMsg.deletable) {
                                 resultMsg.delete();
@@ -174,16 +161,16 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
                         }
                         if (roleSelectInteraction.customId === "cancel") {
                             const cancelEmbed = new EmbedBuilder()
-                                .setAuthor({ name: value.data.interaction.user.username, iconURL: value.data.interaction.user.displayAvatarURL() })
+                                .setAuthor({ name: value.data.author.username, iconURL: value.data.author.displayAvatarURL() })
                                 .setColor("Red")
                                 .setTitle("General Role Management")
-                                .setDescription(`Cancelled general role management for <@${member.discordId}>. All changes are reverted.`)
+                                .setDescription(`Cancelled general role management for <@${currMember.discordId}>. All changes are reverted.`)
                                 .addFields([
-                                    { name: "Current Roles", value: member.generalRoles.map(role => role.role.Name).join(", ") || "No Role" }
+                                    { name: "Current Roles", value: targetMember.generalRoles.map(role => role.role.Name).join(", ") || "No Role" }
                                 ])
                                 .setTimestamp()
                                 .setFooter({ text: "Powered by NekoYuki" });
-                            let resultMsg = await currChannel.send({ embeds: [cancelEmbed] });
+                            let resultMsg = await value.data.channel.send({ embeds: [cancelEmbed] });
                             await delay(5000);
                             if (resultMsg.deletable) {
                                 resultMsg.delete();

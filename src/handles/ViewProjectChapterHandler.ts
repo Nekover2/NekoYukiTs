@@ -183,7 +183,13 @@ export default class ViewProjectChapterHandler implements IMediatorHandle<ViewPr
             // TODO: add edit and delete chapter functionality
             switch (btnInteraction.customId) {
                 case "createChapter":
-                    await value.data.customClient.mediator.send(new CreateChapterRequest(value.data.customClient, value.data.interaction.channel as TextChannel, value.data.author, value.data.project));
+                    await value.data.customClient.mediator.send(new CreateChapterRequest(
+                        value.data.customClient,
+                        value.data.interaction.channel as TextChannel,
+                        value.data.interaction.user,
+                        value.data.author,
+                        value.data.project
+                    ));
                     break;
                 default:
                     return btnInteraction;

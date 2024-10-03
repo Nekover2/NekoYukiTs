@@ -1,6 +1,7 @@
-import { Interaction, User } from "discord.js";
+import { Interaction, TextChannel, User } from "discord.js";
 import CustomClient from "../base/classes/CustomClient";
 import IMediatorRequest from "../base/interfaces/IMediatorRequest";
+import Member from "../base/NekoYuki/entities/Member";
 
 export default class ManageMemberGeneralRoleRequest implements IMediatorRequest {
     name: string;
@@ -10,21 +11,22 @@ export default class ManageMemberGeneralRoleRequest implements IMediatorRequest 
         this.data = ManageMemberGeneralRoleRequestOptions;
     }
     fromInteraction(customClient: CustomClient, interaction: Interaction): IMediatorRequest {
-        return new ManageMemberGeneralRoleRequest({
-            customClient: customClient,
-            interaction: interaction
-        });
+        throw new Error("Method not implemented."); 
     }
 
 }
 
 class ManageMemberGeneralRoleRequestOptions {
     customClient: CustomClient;
-    interaction: Interaction;
-    member? : User;
-    constructor(customClient: CustomClient, interaction: Interaction, member?: User) {
+    channel: TextChannel;
+    author: User;
+    authorMember: Member;
+    targetUser: User;
+    constructor(customClient: CustomClient, channel:TextChannel, author: User, authorMember: Member, targetUser: User) {
         this.customClient = customClient;
-        this.interaction = interaction;
-        this.member = member;
+        this.channel = channel;
+        this.author = author;
+        this.authorMember = authorMember;
+        this.targetUser = targetUser;
     }
 }

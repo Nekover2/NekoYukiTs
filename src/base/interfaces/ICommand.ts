@@ -1,6 +1,7 @@
 import { ChatInputCommandInteraction } from "discord.js";
 import CustomClient from "../classes/CustomClient";
 import Category from "../enums/Category";
+import Member from "../NekoYuki/entities/Member";
 
 export default interface ICommand {
     client: CustomClient;
@@ -13,6 +14,6 @@ export default interface ICommand {
     cooldown: number;
     guildId: string;
 
-    Execute(interaction : ChatInputCommandInteraction) : void;
+    Execute(interaction : ChatInputCommandInteraction, authorMember?: Member) : void;
     AutoComplete(interaction : ChatInputCommandInteraction) : void;
 }

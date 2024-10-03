@@ -3,6 +3,7 @@ import CustomClient from "../../base/classes/CustomClient";
 import Event from "../../base/classes/Event";
 import ICommand from "../../base/interfaces/ICommand";
 import CustomError from "../../base/classes/CustomError";
+import Member from "../../base/NekoYuki/entities/Member";
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -35,8 +36,6 @@ export default class CommandHandler extends Event {
             const expirationTime = timestamps.get(interaction.user.id)! + cooldownAmount;
             if (now < expirationTime) {
                 const timeLeft = (expirationTime - now) / 1000;
-                const timeLeftEmbed = new EmbedBuilder()
-
                 return await interaction.reply({
                     embeds: [
                         new EmbedBuilder()
@@ -49,13 +48,21 @@ export default class CommandHandler extends Event {
         }
         timestamps.set(interaction.user.id, now);
         setTimeout(() => timestamps.delete(interaction.user.id), cooldownAmount);
-
         try {
             const subCommandGroup = interaction.options.getSubcommandGroup(false);
             const subCommand = `${interaction.commandName}${subCommandGroup ? `.${subCommandGroup}` : ""}.${interaction.options.getSubcommand(false)}`;
+
+            let yukiMember = await this.client.dataSources.getRepository(Member).findOne({
+                where: { discordId: interaction.user.id },
+                relations: ["generalRoles"]
+            });
+            
             await interaction.deferReply({ ephemeral: true });
             interaction.deleteReply();
-            await this.client.subCommands.get(subCommand)?.Execute(interaction) || await command.Execute(interaction);
+            if(yukiMember) 
+                await this.client.subCommands.get(subCommand)?.Execute(interaction, yukiMember) || await command.Execute(interaction, yukiMember);
+            else
+                await this.client.subCommands.get(subCommand)?.Execute(interaction) || await command.Execute(interaction);
         } catch (error) {
             console.error(error);
             if (error instanceof CustomError) {

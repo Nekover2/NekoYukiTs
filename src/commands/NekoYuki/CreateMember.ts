@@ -5,6 +5,7 @@ import Category from "../../base/enums/Category";
 import CreateMemberRequest from "../../requests/CreateMemberRequest";
 import CustomError from "../../base/classes/CustomError";
 import ErrorCode from "../../base/enums/ErrorCode";
+import Member from "../../base/NekoYuki/entities/Member";
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -27,7 +28,7 @@ export default class CreateMember extends Command {
         });
     }
 
-    async Execute(interaction: ChatInputCommandInteraction): Promise<void> {
+    async Execute(interaction: ChatInputCommandInteraction, authorMember: Member): Promise<void> {
         try {
             //@ts-ignore
             const createMemberRequest = new CreateMemberRequest(this.client, interaction.channel as TextChannel, interaction.options.getUser("member"), interaction.user);

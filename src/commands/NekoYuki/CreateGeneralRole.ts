@@ -1,10 +1,11 @@
-import { ChatInputCommandInteraction, PermissionsBitField } from "discord.js";
+import { ChatInputCommandInteraction, PermissionsBitField, TextChannel } from "discord.js";
 import Command from "../../base/classes/Command";
 import Category from "../../base/enums/Category";
 import CustomClient from "../../base/classes/CustomClient";
 import CustomError from "../../base/classes/CustomError";
 import ErrorCode from "../../base/enums/ErrorCode";
 import CreateGeneralRoleRequest from "../../requests/CreateGeneralRoleRequest";
+import Member from "../../base/NekoYuki/entities/Member";
 
 export default class CreateGeneralRole extends Command {
     constructor(client: CustomClient) {
@@ -20,9 +21,9 @@ export default class CreateGeneralRole extends Command {
         });
     }
 
-    async Execute(interaction: ChatInputCommandInteraction ): Promise<void> {
+    async Execute(interaction: ChatInputCommandInteraction, authorMember : Member): Promise<void> {
         try {
-            const request = new CreateGeneralRoleRequest({customClient: this.client, interaction: interaction});
+            const request = new CreateGeneralRoleRequest({customClient: this.client, channel: interaction.channel as TextChannel, author: interaction.user, authorMember: authorMember});
             const result = await this.client.mediator.send(request);
         } catch (error) {
             if (error instanceof CustomError) {

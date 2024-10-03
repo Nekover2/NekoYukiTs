@@ -6,6 +6,7 @@ import CustomError from "../base/classes/CustomError";
 import Member from "../base/NekoYuki/entities/Member";
 import { PermissionHelper } from "../base/NekoYuki/enums/Permission";
 import ViewMemberProjectRequest from "../requests/ViewMemberProjectRequest";
+import NavigationButton from "../utils/NavigationButton";
 
 export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequest> {
     name: string;
@@ -18,14 +19,14 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
     async handle(value: ViewMemberRequest): Promise<any> {
         let sentMsg: Array<Message> = [];
         try {
-            if (!value.data.member) {
-                value.data.member = await this.chooseMember(value, sentMsg);
+            if (!value.data.targetUser) {
+                value.data.targetUser = await this.chooseMember(value, sentMsg);
             }
-            if (!value.data.member) {
+            if (!value.data.targetUser) {
                 return;
             }
             await this.clearAllMessages(sentMsg);
-            await this.viewMember(value, value.data.member, sentMsg);
+            await this.viewMember(value, value.data.targetUser, sentMsg);
         } catch (error) {
             if (error instanceof CustomError) {
                 throw error;
@@ -130,12 +131,13 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
                 .setCustomId("viewProjectStatistic")
                 .setLabel("View project statistic")
                 .setStyle(ButtonStyle.Primary);
+            const returnBtn = NavigationButton.getReturnButton();
             const editMemberBtn = new ButtonBuilder()
                 .setCustomId("editMember")
                 .setLabel("Edit member")
                 .setStyle(ButtonStyle.Primary);
             const actionRow = new ActionRowBuilder()
-                .addComponents(viewProjectStatisticBtn, editMemberBtn);
+                .addComponents(viewProjectStatisticBtn, returnBtn);
 
             // @ts-ignore
             const memberEmbedMessage = await value.data.channel.send({ embeds: [memberEmbed], components: [actionRow] });

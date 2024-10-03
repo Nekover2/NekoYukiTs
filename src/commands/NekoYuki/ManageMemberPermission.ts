@@ -6,6 +6,7 @@ import CreateMemberRequest from "../../requests/CreateMemberRequest";
 import CustomError from "../../base/classes/CustomError";
 import ErrorCode from "../../base/enums/ErrorCode";
 import ManageMemberPermissionRequest from "../../requests/ManageMemberPermissionRequest";
+import Member from "../../base/NekoYuki/entities/Member";
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -28,10 +29,12 @@ export default class CreateMember extends Command {
         });
     }
 
-    async Execute(interaction: ChatInputCommandInteraction): Promise<void> {
+    async Execute(interaction: ChatInputCommandInteraction, authorMember : Member): Promise<void> {
         try {
+            const member = interaction.options.getUser("member");
+            if (!member) throw new CustomError("Member not found", ErrorCode.BadRequest, "manage-member-permission");
             //@ts-ignore
-            const manageMemberPermissionRequest = new ManageMemberPermissionRequest(this.client, interaction.channel as TextChannel, interaction.options.getUser("member"), interaction.user);
+            const manageMemberPermissionRequest = new ManageMemberPermissionRequest(this.client, interaction.channel as TextChannel, interaction.user, authorMember, member);
             const result = await this.client.mediator.send(manageMemberPermissionRequest);
         } catch (error) {
             if (error instanceof CustomError) {

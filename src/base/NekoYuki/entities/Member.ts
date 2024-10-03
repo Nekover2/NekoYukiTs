@@ -39,6 +39,11 @@ export default class Member implements IMember {
         if ((this.permissions & permission) === permission) {
             return true;
         }
+        for (let i = 0; i < this.generalRoles.length; i++) {
+            if (this.generalRoles[i].role.hasPermission(permission)) {
+                return true;
+            }
+        }
         return false;
     }
     addPermission(permission: Permission): void {

@@ -18,4 +18,11 @@ export default class NavigationButton {
 
         return [navigateLeftBtn, notifyBtn, navigateRightBtn];
     }
+
+    static getReturnButton(): ButtonBuilder {
+        return new ButtonBuilder()
+            .setCustomId("return")
+            .setLabel("Return")
+            .setStyle(ButtonStyle.Danger);
+    }
 }

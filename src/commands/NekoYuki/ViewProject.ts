@@ -5,6 +5,7 @@ import Category from "../../base/enums/Category";
 import CustomError from "../../base/classes/CustomError";
 import ErrorCode from "../../base/enums/ErrorCode";
 import ViewProjectRequest from "../../requests/ViewProjectRequest";
+import Member from "../../base/NekoYuki/entities/Member";
 
 export default class ViewProject extends Command {
 
@@ -20,10 +21,10 @@ export default class ViewProject extends Command {
             guildId: "-1"
         });
     }
-    async Execute(interaction: ChatInputCommandInteraction): Promise<void> {
+    async Execute(interaction: ChatInputCommandInteraction, authorMember: Member): Promise<void> {
         try {
             const author = interaction.user;
-            await this.client.mediator.send(new ViewProjectRequest(this.client, interaction.channel as TextChannel, author));
+            await this.client.mediator.send(new ViewProjectRequest(this.client, interaction.channel as TextChannel, author, authorMember));
         } catch (error) {
             if(error instanceof CustomError) {
                 throw error;

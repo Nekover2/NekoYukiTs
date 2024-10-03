@@ -5,6 +5,7 @@ import Category from "../../base/enums/Category";
 import ViewMemberRequest from "../../requests/ViewMemberRequest";
 import CustomError from "../../base/classes/CustomError";
 import ErrorCode from "../../base/enums/ErrorCode";
+import Member from "../../base/NekoYuki/entities/Member";
 
 export default class ViewMember extends Command {
     constructor(client: CustomClient) {
@@ -25,10 +26,11 @@ export default class ViewMember extends Command {
         });
     }
 
-    async Execute(interaction: ChatInputCommandInteraction): Promise<void> {
+    async Execute(interaction: ChatInputCommandInteraction, authorMember: Member): Promise<void> {
         try {
             const member = interaction.options.getUser("member");
-            const request = new ViewMemberRequest(this.client, interaction.guild as Guild, interaction.channel as TextChannel, interaction.user as User, member as User);
+            if(!member) throw new CustomError("Member not found", ErrorCode.BadRequest, "view-member");
+            const request = new ViewMemberRequest(this.client, interaction.channel as TextChannel, interaction.user, authorMember, member);
             await this.client.mediator.send(request);
         } catch (error) {
             if (error instanceof CustomError) {

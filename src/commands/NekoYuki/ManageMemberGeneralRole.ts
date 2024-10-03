@@ -5,13 +5,14 @@ import Category from "../../base/enums/Category";
 import CustomError from "../../base/classes/CustomError";
 import ErrorCode from "../../base/enums/ErrorCode";
 import ManageMemberGeneralRoleRequest from "../../requests/ManageMemberGeneralRoleRequest";
+import Member from "../../base/NekoYuki/entities/Member";
 
 
 export default class CreateMember extends Command {
     constructor(client: CustomClient) {
         super(client, {
             name: "manage-member-general-role",
-            description: "Update general role of a member", 
+            description: "Update general role of a member",
             category: Category.NekoYuki,
             options: [{
                 name: "member",
@@ -26,10 +27,18 @@ export default class CreateMember extends Command {
         });
     }
 
-    async Execute(interaction: ChatInputCommandInteraction): Promise<void> {
+    async Execute(interaction: ChatInputCommandInteraction, authorMember: Member): Promise<void> {
         try {
+            const member = interaction.options.getUser("member");
+            if (!member) throw new CustomError("Member not found", ErrorCode.BadRequest, "manage-member-general-role");
             //@ts-ignore
-            const result = await this.client.mediator.send(new ManageMemberGeneralRoleRequest({customClient: this.client, interaction: interaction, member: interaction.options.getUser("member")}));
+            const result = await this.client.mediator.send(new ManageMemberGeneralRoleRequest({
+                customClient: this.client,
+                channel: interaction.channel as TextChannel,
+                author: interaction.user,
+                authorMember: authorMember,
+                targetUser: member
+            }));
         } catch (error) {
             if (error instanceof CustomError) {
                 throw error;

@@ -3,6 +3,7 @@ import Category from '../enums/Category';
 import ICommand from '../interfaces/ICommand'
 import CustomClient from './CustomClient';
 import ICommandOptions from '../interfaces/ICommandOptions';
+import Member from '../NekoYuki/entities/Member';
 
 export default class Command implements ICommand {
     client: CustomClient;
@@ -14,7 +15,6 @@ export default class Command implements ICommand {
     dmPermissions: boolean;
     cooldown: number;
     guildId: string;
-
     constructor(client: CustomClient, options: ICommandOptions) {
         this.client = client;
         this.name = options.name;
@@ -26,11 +26,10 @@ export default class Command implements ICommand {
         this.cooldown = options.cooldown;
         this.guildId = options.guildId;
     }
-    Execute(interaction: ChatInputCommandInteraction): void {
+    Execute(interaction: ChatInputCommandInteraction, authorMember?: Member): void {
         throw new Error('Method not implemented.');
     }
     AutoComplete(interaction: ChatInputCommandInteraction): void {
         throw new Error('Method not implemented.');
     }
-
 }

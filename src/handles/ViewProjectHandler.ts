@@ -22,8 +22,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
 
     async handle(value: ViewProjectRequest): Promise<any> {
         try {
-            const yukiMember = await value.data.client.dataSources.getRepository(Member).findOne({ where: { discordId: value.data.author.id } });
-            if (!yukiMember) throw new CustomError("You are not a member of NekoYuki", ErrorCode.BadRequest, "View Project");
+            const yukiMember = value.data.authorMember;
             if (!value.data.projectId)
                 value.data.projectId = await ViewProjectHandler.chooseProject(value);
             if(!value.data.projectId) return;
@@ -266,7 +265,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             try {
                 switch (globalBtnInteractionAfter.customId) {
                     case "createChapter":
-                        const createChapterRequest = new CreateChapterRequest(client, currChannel, yukiMember, project)
+                        const createChapterRequest = new CreateChapterRequest(client, currChannel, author, yukiMember, project)
                         await client.mediator.send(createChapterRequest);
                         break;
                     case "viewChapter":

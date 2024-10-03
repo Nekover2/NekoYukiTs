@@ -5,7 +5,6 @@ import IMediatorHandle from "../base/interfaces/IMediatorHandle";
 import Project from "../base/NekoYuki/entities/Project";
 import Permission from "../base/NekoYuki/enums/Permission";
 import CreateChapterRequest from "../requests/CreateChapterRequest";
-import IProject from "../base/NekoYuki/interfaces/IProject";
 import Chapter from "../base/NekoYuki/entities/Chapter";
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
@@ -16,21 +15,26 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
         this.name = "CreateChapter";
         this.ableToNavigate = false;
     }
+
+    async checkPermission(value: CreateChapterRequest, currProject: Project): Promise<boolean> {
+        let permissionFlag = false;
+        const memberPosition = currProject.members.find(member => member.member.discordId === value.data.author.id);
+        if (memberPosition?.hasPermission(Permission.UpdateProject)) permissionFlag = true;
+        if (!permissionFlag) throw new CustomError("You do not have permission to create a chapter", ErrorCode.Forbidden, "Create Chapter");
+        return permissionFlag;
+    }
+
     async handle(value: CreateChapterRequest): Promise<any> {
         const sentMsgs: Array<Message> = [];
         try {
-            // STEP 1: Check if author has permissions
-            let permissionFlag = true;
+            // STEP 1: Check if author has permissions to create a chapter
             const currProject = await value.data.client.dataSources.getRepository(Project).findOne({
                 where: { id: value.data.project.id },
                 relations: ["members"]
             });
             if (!currProject) throw new CustomError("Project not found", ErrorCode.BadRequest, "Create Chapter");
-            const memberPosition = currProject.members.find(member => member.member.discordId === value.data.author.discordId);
-            if (memberPosition?.hasPermission(Permission.UpdateProject)) permissionFlag = true;
-            if (value.data.author.hasPermission(Permission.MangeProject)) permissionFlag = true;
-            if (!permissionFlag) throw new CustomError("You do not have permission to create a chapter", ErrorCode.Forbidden, "Create Chapter");
-
+            
+            await this.checkPermission(value, currProject);
             // STEP 2: Create a chapter
             const infoInteraction = await this.preSetup(value, currProject, sentMsgs);
             if (!infoInteraction) return;
@@ -50,7 +54,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
             });
         }
     }
-    async preSetup(value: CreateChapterRequest, project: IProject, sentMsgs: Array<Message>): Promise<ButtonInteraction | undefined> {
+    async preSetup(value: CreateChapterRequest, project: Project, sentMsgs: Array<Message>): Promise<ButtonInteraction | undefined> {
         try {
             const infoEmbed = new EmbedBuilder()
                 .setTitle("Before we start...")
@@ -77,7 +81,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
             const infoMsg = await value.data.channel.send({ embeds: [infoEmbed], components: [actionRow] });
             sentMsgs.push(infoMsg);
             try {
-                const infoMessageInteraction = await infoMsg.awaitMessageComponent({ filter: i => i.user.id === value.data.author.discordId, time: 60000, componentType: ComponentType.Button });
+                const infoMessageInteraction = await infoMsg.awaitMessageComponent({ filter: i => i.user.id === value.data.author.id, time: 60000, componentType: ComponentType.Button });
                 infoMsg.delete();
                 sentMsgs.pop();
                 if (infoMessageInteraction.customId === "cancel") {
@@ -111,7 +115,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
                 .setStyle(TextInputStyle.Short)
                 .setRequired(true);
             const chapterLinkInput = new TextInputBuilder()
-                .setCustomId("chapter-link") 
+                .setCustomId("chapter-link")
                 .setPlaceholder("Chapter Link")
                 .setLabel("Chapter Link")
                 .setStyle(TextInputStyle.Short)
@@ -144,7 +148,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
         }
     }
 
-    async saveChapter(value: CreateChapterRequest, project: IProject, chapterInfo: CreateChapterOptions): Promise<Chapter> {
+    async saveChapter(value: CreateChapterRequest, project: Project, chapterInfo: CreateChapterOptions): Promise<Chapter> {
         try {
             const newChapter = new Chapter();
             newChapter.title = chapterInfo.name;
@@ -168,7 +172,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
             const progressMsg = await value.data.channel.send({ embeds: [progressEmbed] });
             delay(3000);
             const savedChapter = await value.data.client.dataSources.getRepository(Chapter).findOne({
-                where: { title: newChapter.title, link: newChapter.link}
+                where: { title: newChapter.title, link: newChapter.link }
             });
             if (savedChapter) {
                 progressEmbed
@@ -186,9 +190,9 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
             await progressMsg.edit({ embeds: [progressEmbed] });
             await delay(2000);
             progressMsg.delete();
-            
+
             const savedChapter2 = await value.data.client.dataSources.getRepository(Chapter).findOne({
-                where: { title: newChapter.title, link: newChapter.link},
+                where: { title: newChapter.title, link: newChapter.link },
                 relations: ["project"]
             });
             if (!savedChapter2) throw new CustomError("Cannot find chapter in database", ErrorCode.InternalServerError, "Create Chapter");
@@ -204,6 +208,6 @@ class CreateChapterOptions {
     link: string;
     constructor(name: string, link: string) {
         this.name = name;
-        this.link = link; 
+        this.link = link;
     }
 }
