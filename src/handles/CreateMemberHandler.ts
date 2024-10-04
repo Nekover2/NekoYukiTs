@@ -4,6 +4,7 @@ import Member from "../base/NekoYuki/entities/Member";
 import CreateMemberRequest from "../requests/CreateMemberRequest";
 import ErrorCode from "../base/enums/ErrorCode";
 import CustomError from "../base/classes/CustomError";
+import Permission from "../base/NekoYuki/enums/Permission";
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export default class CreateMemberHandler implements IMediatorHandle<CreateMemberRequest> {
@@ -13,20 +14,23 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
         this.name = "CreateMember";
         this.ableToNavigate = true;
     }
+
+    async checkPermissions(value: CreateMemberRequest) : Promise<boolean> {
+        if(!value.data.authorMember){
+            throw new CustomError("Author is not a member", ErrorCode.UserCannotBeFound, "Create Member");
+        }
+        if(!value.data.authorMember.hasPermission(Permission.MangeMember)) {
+            throw new CustomError("Author does not have permission to manage members", ErrorCode.Forbidden, "Create Member");
+        }
+        const existingMember = await value.data.client.dataSources.getRepository(Member).findOne({ where: { discordId: value.data.targetUser.id} });
+        if(existingMember) {
+            throw new CustomError("Member is already registered", ErrorCode.UserAlreadyExists, "Create Member");
+        }
+        return true;
+    }
     async handle(value: CreateMemberRequest): Promise<Member> {
         try {
-            // Check if author has permissions
-            const authorMember = await value.data.client.dataSources.getRepository(Member).findOne({
-                where: { discordId: value.data.author.id }
-            });
-
-            // if (!authorMember)
-            //     throw new CustomError("Author is not a member", ErrorCode.UserCannotBeFound, "Create Member");
-            // if (!authorMember.hasPermission(Permission.MangeMember))
-            //     throw new CustomError("Author does not have permission to manage members", ErrorCode.Forbidden, "Create Member");
-            // const existingMember = await value.data.client.dataSources.getRepository(Member).findOne({ where: { discordId: value.data.member.id } });
-            // if (existingMember)
-            //     throw new CustomError("Member is already registered", ErrorCode.UserAlreadyExists, "Create Member");
+            await this.checkPermissions(value);
 
             const newMember = new Member();
             newMember.discordId = value.data.targetUser.id;

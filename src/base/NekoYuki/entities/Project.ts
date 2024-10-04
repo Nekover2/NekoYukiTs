@@ -30,6 +30,7 @@ export default class Project implements IProject {
 
     @Column()
     status: ProjectStatus = ProjectStatus.InProgress;
+    
     @Column()
     ownerId: string = "";
 

@@ -154,7 +154,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
             newChapter.title = chapterInfo.name;
             newChapter.link = chapterInfo.link;
             newChapter.project = project;
-            newChapter.verified = false;
+            newChapter.verified = project.verified;
             newChapter.creationDate = new Date();
             const progressEmbed = new EmbedBuilder()
                 .setTitle("Creating Chapter")
@@ -184,6 +184,8 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
                 return savedChapter;
             }
             await value.data.client.dataSources.getRepository(Chapter).save(newChapter);
+            project.lastUpdated = new Date();
+            await value.data.client.dataSources.getRepository(Project).save(project);
             progressEmbed
                 .setColor("Green")
                 .setDescription("Chapter saved successfully! returning...");

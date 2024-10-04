@@ -1,10 +1,11 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuilder, Interaction } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuilder, Interaction, StringSelectMenuBuilder } from "discord.js";
 import CustomError from "../base/classes/CustomError";
 import ErrorCode from "../base/enums/ErrorCode";
 import IMediatorHandle from "../base/interfaces/IMediatorHandle";
 import ViewMemberProjectRequest from "../requests/ViewMemberProjectRequest";
 import NavigationButton from "../utils/NavigationButton";
 import ProjectMember from "../base/NekoYuki/entities/ProjectMember";
+import ViewProjectRequest from "../requests/ViewProjectRequest";
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export default class ViewMemberProjectHandler implements IMediatorHandle<ViewMemberProjectRequest> {
@@ -67,13 +68,12 @@ export default class ViewMemberProjectHandler implements IMediatorHandle<ViewMem
                 .setStyle(ButtonStyle.Danger);
             const actionRow = new ActionRowBuilder()
                 .addComponents(showAllAcceptProject, showAllPendingProject, returnButton);
-                // @ts-ignore
+            // @ts-ignore
             const infoMsgWithButton = await value.data.channel.send({ embeds: [memberProjectInfoEmbed], components: [actionRow] });
-            
-            let userReaction = "-1";
 
+            let userReaction = "-1";
             try {
-                const filter = (interaction : Interaction) => { return interaction.user.id === value.data.author.id; }
+                const filter = (interaction: Interaction) => { return interaction.user.id === value.data.author.id; }
                 const interaction = await infoMsgWithButton.awaitMessageComponent({ filter, time: 60000, componentType: ComponentType.Button });
                 infoMsgWithButton.delete();
                 userReaction = interaction.customId;
@@ -90,7 +90,7 @@ export default class ViewMemberProjectHandler implements IMediatorHandle<ViewMem
                 case "showAllPendingProject":
                     return await this.showPendingProject(value, numberOfPendingProject);
                     break;
-                
+
                 case "return":
                     return true;
                     break;
@@ -105,9 +105,9 @@ export default class ViewMemberProjectHandler implements IMediatorHandle<ViewMem
         }
     }
 
-    async showPendingProject(value: ViewMemberProjectRequest, numberOfPendingProject : number): Promise<boolean> {
+    async showPendingProject(value: ViewMemberProjectRequest, numberOfPendingProject: number): Promise<boolean> {
         try {
-            if(numberOfPendingProject === 0) {
+            if (numberOfPendingProject === 0) {
                 const noPendingProjectEmbed = new EmbedBuilder()
                     .setAuthor({ name: value.data.author.username, iconURL: value.data.author.displayAvatarURL() })
                     .setTitle(`Pending project of ${value.data.targetUser?.displayName}`)
@@ -142,26 +142,47 @@ export default class ViewMemberProjectHandler implements IMediatorHandle<ViewMem
                     .setTimestamp();
                 const navigationButtons = NavigationButton.getNavigationButton();
                 if (i === 0) navigationButtons[0].setDisabled(true);
-                if (5*(i+1) >= numberOfPendingProject) navigationButtons[2].setDisabled(true);
+                if (5 * (i + 1) >= numberOfPendingProject) navigationButtons[2].setDisabled(true);
                 const navigationRow = new ActionRowBuilder().addComponents(navigationButtons);
-                // @ts-ignore
-                const pendingChapterMessage = await value.data.channel.send({ embeds: [pendingChapterEmbed], components: [navigationRow] });
 
+                const chooseProjectSelectMenu = new StringSelectMenuBuilder()
+                    .setCustomId("chooseProject")
+                    .setPlaceholder("Select a project to view")
+                    .addOptions(pendingProjectInfo.map((project) => {
+                        return {
+                            label: project.project.name.slice(0, 25) + (project.project.name.length > 25 ? "..." : ""),
+                            value: project.project.id.toString()
+                        }
+                    }));
+                const chooseProjectRow = new ActionRowBuilder().addComponents(chooseProjectSelectMenu);
+                // @ts-ignore
+                const pendingChapterMessage = await value.data.channel.send({ embeds: [pendingChapterEmbed], components: [navigationRow, chooseProjectRow] });
+                let choosenProjectId = "-1";
                 try {
-                    const filter = (interaction : Interaction) => {
+                    const filter = (interaction: Interaction) => {
                         return interaction.user.id === value.data.author.id;
                     }
-                    const interaction = await pendingChapterMessage.awaitMessageComponent({ filter, time: 60000, componentType: ComponentType.Button });
-                    if (interaction.customId === "navigateLeft") {
-                        i--;
-                        if (i < 0) i = 0;
-                    } else if (interaction.customId === "navigateRight") {
-                        i++;
-                        if(5*(i+1) >= numberOfPendingProject) i--;
+                    const interaction = await pendingChapterMessage.awaitMessageComponent({ filter, time: 60000 });
+                    pendingChapterMessage.delete();
+                    if (interaction.isButton())
+                        if (interaction.customId === "navigateLeft") {
+                            i--;
+                            if (i < 0) i = 0;
+                        } else if (interaction.customId === "navigateRight") {
+                            i++;
+                            if (5 * (i + 1) >= numberOfPendingProject) i--;
+                        }
+
+                    if (interaction.isStringSelectMenu()) {
+                        choosenProjectId = interaction.values[0];
                     }
                 } catch (error) {
-                    pendingChapterMessage.edit({components: []});
+                    pendingChapterMessage.edit({ components: [] });
                     return false;
+                }
+                if(choosenProjectId != "-1") {
+                    const viewProjectRequest = new ViewProjectRequest(value.data.client, value.data.channel, value.data.author, value.data.authorMember, choosenProjectId)
+                    return await value.data.client.mediator.send(viewProjectRequest);
                 }
             }
         } catch (error) {
@@ -171,14 +192,14 @@ export default class ViewMemberProjectHandler implements IMediatorHandle<ViewMem
     }
 
 
-    async showAcceptedProject(value: ViewMemberProjectRequest, numberOfVerifiedProject : number): Promise<boolean> {
+    async showAcceptedProject(value: ViewMemberProjectRequest, numberOfVerifiedProject: number): Promise<boolean> {
         try {
-            if(numberOfVerifiedProject === 0) {
+            if (numberOfVerifiedProject === 0) {
                 const noPendingProjectEmbed = new EmbedBuilder()
                     .setAuthor({ name: value.data.author.username, iconURL: value.data.author.displayAvatarURL() })
                     .setTitle(`Pending project of ${value.data.targetUser?.displayName}`)
-                    .setDescription(`Oops! Member ${value.data.targetUser?.displayName} have **no accepted project**. ` + 
-                        + `You can told members who can accept your project to accept your pending project if you have now!` 
+                    .setDescription(`Oops! Member ${value.data.targetUser?.displayName} have **no accepted project**. ` +
+                        + `You can told members who can accept your project to accept your pending project if you have now!`
                         + `\n Return to the menu in 5 seconds...`)
                     .setColor("Green")
                     .setTimestamp();
@@ -186,7 +207,7 @@ export default class ViewMemberProjectHandler implements IMediatorHandle<ViewMem
                 await delay(5000);
                 noPendingProjectMessage.delete();
             }
-    
+
             let i = 0;
             while (true) {
                 const verifiedProjectInfo = await value.data.client.dataSources.getRepository(ProjectMember)
@@ -211,26 +232,49 @@ export default class ViewMemberProjectHandler implements IMediatorHandle<ViewMem
                     .setTimestamp();
                 const navigationButtons = NavigationButton.getNavigationButton();
                 if (i === 0) navigationButtons[0].setDisabled(true);
-                if (5*(i+1) >= numberOfVerifiedProject) navigationButtons[2].setDisabled(true);
+                if (5 * (i + 1) >= numberOfVerifiedProject) navigationButtons[2].setDisabled(true);
                 const navigationRow = new ActionRowBuilder().addComponents(navigationButtons);
-                // @ts-ignore
-                const verifiedChapterMessage = await value.data.channel.send({ embeds: [verifiedChapterEmbed], components: [navigationRow] });
 
+                const chooseProjectSelectMenu = new StringSelectMenuBuilder()
+                    .setCustomId("chooseProject")
+                    .setPlaceholder("Select a project to view")
+                    .addOptions(verifiedProjectInfo.map((project) => {
+                        return {
+                            label: project.project.name.slice(0, 25) + (project.project.name.length > 25 ? "..." : ""),
+                            value: project.project.id.toString()
+                        }
+                    }));
+                const chooseProjectRow = new ActionRowBuilder().addComponents(chooseProjectSelectMenu);
+                // @ts-ignore
+                const verifiedChapterMessage = await value.data.channel.send({ embeds: [verifiedChapterEmbed], components: [navigationRow, chooseProjectRow] });
+                
+                let choosenProjectId = "-1";
                 try {
-                    const filter = (interaction : Interaction) => {
+                    const filter = (interaction: Interaction) => {
                         return interaction.user.id === value.data.author.id;
                     }
-                    const interaction = await verifiedChapterMessage.awaitMessageComponent({ filter, time: 60000, componentType: ComponentType.Button });
-                    if (interaction.customId === "navigateLeft") {
-                        i--;
-                        if (i < 0) i = 0;
-                    } else if (interaction.customId === "navigateRight") {
-                        i++;
-                        if(5*(i+1) >= numberOfVerifiedProject) i--;
-                    }
+                    const interaction = await verifiedChapterMessage.awaitMessageComponent({ filter, time: 60000 });
+                    verifiedChapterMessage.delete();
+                    if (interaction.isButton())
+                        if (interaction.customId === "navigateLeft") {
+                            i--;
+                            if (i < 0) i = 0;
+                        } else if (interaction.customId === "navigateRight") {
+                            i++;
+                            if (5 * (i + 1) >= numberOfVerifiedProject) i--;
+                        }
+
+                    if (interaction.isStringSelectMenu()) {
+                        choosenProjectId = interaction.values[0];
+                    }                        
                 } catch (error) {
-                    verifiedChapterMessage.edit({components: []});
+                    verifiedChapterMessage.edit({ components: [] });
                     return false;
+                }
+
+                if(choosenProjectId != "-1") {
+                    const viewProjectRequest = new ViewProjectRequest(value.data.client, value.data.channel, value.data.author, value.data.authorMember, choosenProjectId)
+                    return await value.data.client.mediator.send(viewProjectRequest);
                 }
             }
         } catch (error) {

@@ -25,7 +25,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             const yukiMember = value.data.authorMember;
             if (!value.data.projectId)
                 value.data.projectId = await ViewProjectHandler.chooseProject(value);
-            if(!value.data.projectId) return;
+            if (!value.data.projectId) return;
             await ViewProjectHandler.viewProject(value.data.client, value.data.channel, value.data.author, yukiMember, value.data.projectId);
             // TODO: add navigation buttons
             // TODO: rebuild project query
@@ -143,14 +143,14 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             //     });
             let project = await client.dataSources.getRepository(Project)
                 .createQueryBuilder('project')
-                .where("project.id = :id", { id:projectId })
+                .where("project.id = :id", { id: projectId })
                 .leftJoinAndSelect('project.members', 'projectMember')
                 .leftJoinAndSelect('projectMember.role', 'role')
                 .leftJoinAndSelect('projectMember.member', 'member')
                 .leftJoin('project.chapters', 'chapter')
                 .loadRelationCountAndMap("project.chaptersCount", "project.chapters")
                 .getOne();
-            
+
             if (!project) {
                 throw new CustomError("Project not found", ErrorCode.BadRequest, "View Project");
             }
@@ -163,6 +163,9 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             /////////////// Step 02: Build project description ///////////////
             let projectDescription = "***-----OWNER-----***\n";
             projectDescription += `**<@${project.ownerId}>\n**`;
+            if (project.members.length == 0) projectDescription += "`[⚠WARNING] No member, request project owner or project manager to add more member`\n";
+            if (project.verified) projectDescription += "`[✅] Status: ***Verified***`\n";
+            else projectDescription += "`[⚠] Status: ***Not verified***`\n";
             projectDescription += `***------MEMBERS------***\n`;
             const memberRoles = [
                 { role: "Role name", memberId: "Member ID" }
@@ -176,10 +179,11 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                     memberRoles[existingMemberIndex].role += `, ${m.role.Name}`;
                 }
             });
+
             memberRoles.forEach(mr => {
                 projectDescription += `- <@${mr.memberId}> - ${mr.role}\n`;
             });
-            if (project.members.length == 0) projectDescription += "`[⚠WARNING] No member, request project owner or project manager to add more member`\n";
+
 
             /////////////// Step 03: Build project embed ///////////////
             const projectEmbed = new EmbedBuilder()
@@ -248,7 +252,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             /////////////// Step 05: Handle project interaction ///////////////
             let globalBtnInteraction = null;
             try {
-                const projectInteraction = await projectInfoMsg.awaitMessageComponent({ filter: (interaction : Interaction) => interaction.user.id === author.id, time: 60000 });
+                const projectInteraction = await projectInfoMsg.awaitMessageComponent({ filter: (interaction: Interaction) => interaction.user.id === author.id, time: 60000 });
                 await projectInfoMsg.delete();
                 if (projectInteraction.isButton()) {
                     globalBtnInteraction = projectInteraction;
@@ -291,13 +295,13 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
         }
     }
 
-    static async editProject(value : ViewProjectRequest, project: Project) : Promise<void> {
+    static async editProject(value: ViewProjectRequest, project: Project): Promise<void> {
         
     }
 
-    static async deleteProject(value : ViewProjectRequest, project: Project) : Promise<void> {
+    static async deleteProject(value: ViewProjectRequest, project: Project): Promise<void> {
     }
 
-    static async manageMember(value : ViewProjectRequest, project: Project) : Promise<void> {
+    static async manageMember(value: ViewProjectRequest, project: Project): Promise<void> {
     }
 }

@@ -34,6 +34,7 @@ export default class CreateGeneralRoleHandler implements IMediatorHandle<CreateG
             let newRole = new GeneralRole();
             newRole.Name = roleName;
             newRole.CreatedAt = new Date();
+            newRole.Type = GeneralRoleType.General;
             const newFullyRole = await this.getRolePermissions(value, newRole);
             if(newFullyRole === undefined) return;
             const savedRole = await this.saveToDatabase(value, newFullyRole);

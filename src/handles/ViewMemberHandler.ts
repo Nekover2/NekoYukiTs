@@ -1,4 +1,4 @@
-import { Message, User, EmbedBuilder, UserSelectMenuBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Interaction, ComponentType } from "discord.js";
+import { Message, User, EmbedBuilder, UserSelectMenuBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Interaction, ComponentType, TextChannel } from "discord.js";
 import IMediatorHandle from "../base/interfaces/IMediatorHandle";
 import ViewMemberRequest from "../requests/ViewMemberRequest";
 import ErrorCode from "../base/enums/ErrorCode";
@@ -7,6 +7,7 @@ import Member from "../base/NekoYuki/entities/Member";
 import { PermissionHelper } from "../base/NekoYuki/enums/Permission";
 import ViewMemberProjectRequest from "../requests/ViewMemberProjectRequest";
 import NavigationButton from "../utils/NavigationButton";
+import CustomClient from "../base/classes/CustomClient";
 
 export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequest> {
     name: string;
@@ -20,7 +21,7 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
         let sentMsg: Array<Message> = [];
         try {
             if (!value.data.targetUser) {
-                value.data.targetUser = await this.chooseMember(value, sentMsg);
+                value.data.targetUser = await ViewMemberHandler.chooseMember(value.data.channel, value.data.author);
             }
             if (!value.data.targetUser) {
                 return;
@@ -49,10 +50,10 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
         });
     }
 
-    async chooseMember(value: ViewMemberRequest, sentMsg: Array<Message>): Promise<User | undefined> {
+    static async chooseMember(channel: TextChannel, author: User): Promise<User | undefined> {
         try {
             const chooseMemberEmbed = new EmbedBuilder()
-                .setAuthor({ name: value.data.author.username, iconURL: value.data.author.displayAvatarURL() })
+                .setAuthor({ name: author.username, iconURL: author.displayAvatarURL() })
                 .setColor("Blue")
                 .setDescription("Choose a member")
                 .setFooter({ text: "Powered by NekoYuki" })
@@ -71,10 +72,9 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
             const memberSelectRow = new ActionRowBuilder().addComponents(memberSelect);
             //@ts-ignore
             const memberSelectMessage = await value.data.channel.send({ embeds: [chooseMemberEmbed], components: [memberSelectRow, actionRow] });
-            sentMsg.push(memberSelectMessage);
             try {
-                const filter = (interaction: Interaction) => interaction.user.id === value.data.author.id;
-                const memberSelectInteraction = await value.data.channel.awaitMessageComponent({ filter, time: 60000 });
+                const filter = (interaction: Interaction) => interaction.user.id === author.id;
+                const memberSelectInteraction = await channel.awaitMessageComponent({ filter, time: 60000 });
                 if (memberSelectInteraction.customId === "cancel") {
                     return undefined;
                 }
@@ -94,8 +94,6 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
                 throw error;
             }
             throw new CustomError("An ***unknown*** error when receiving interaction", ErrorCode.Forbidden, "view-member", error as Error);
-        } finally {
-            await this.clearAllMessages(sentMsg);
         }
     }
 
@@ -168,5 +166,7 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
             throw new CustomError("An ***unknown*** error when receiving interaction", ErrorCode.Forbidden, "view-member");
         }
     }
-    async editMember(value: ViewMemberRequest, member: User, sentMsg: Array<Message>): Promise<void> { }
+    async editMember(client: CustomClient, channel : TextChannel, author: User, authorMember: Member, targetMember: Member): Promise<void> {
+
+    }
 }

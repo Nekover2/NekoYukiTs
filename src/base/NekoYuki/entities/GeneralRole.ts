@@ -18,6 +18,8 @@ export default class GeneralRole implements IGeneralRole {
     @OneToMany(() => MemberGeneralRole, generalMemerRole => generalMemerRole.role)
     // @ts-ignore
     Members: Member[];
+    @Column() 
+    Type: GeneralRoleType = GeneralRoleType.General;
     hasPermission(permission: Permission) {
         return (this.Permissions & permission) === permission;
     }
