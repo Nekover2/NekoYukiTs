@@ -16,10 +16,10 @@ export default class CreateGeneralRoleHandler implements IMediatorHandle<CreateG
 
     async checkPermission(value: CreateGeneralRoleRequest): Promise<boolean> {
         let hasPermission = false;
-        if(value.data.authorMember.hasPermission(Permission.MangePermission)) {
+        if (value.data.authorMember.hasPermission(Permission.MangePermission)) {
             hasPermission = true;
         }
-        if(!hasPermission) {
+        if (!hasPermission) {
             throw new CustomError("You don't have permission to create a role.", ErrorCode.Forbidden, "Create General Role");
         }
         return hasPermission;
@@ -28,33 +28,33 @@ export default class CreateGeneralRoleHandler implements IMediatorHandle<CreateG
         try {
             await this.checkPermission(value);
             let interaction = await this.sendInfo(value);
-            if(interaction === undefined) return;
+            if (interaction === undefined) return;
             let roleName = await this.getRoleName(value, interaction);
-            if(roleName === undefined) return;
+            if (roleName === undefined) return;
             let newRole = new GeneralRole();
             newRole.Name = roleName;
             newRole.CreatedAt = new Date();
             newRole.Type = GeneralRoleType.General;
             const newFullyRole = await this.getRolePermissions(value, newRole);
-            if(newFullyRole === undefined) return;
+            if (newFullyRole === undefined) return;
             const savedRole = await this.saveToDatabase(value, newFullyRole);
             return savedRole;
         } catch (error) {
-            if(error instanceof CustomError ) throw error;
+            if (error instanceof CustomError) throw error;
             throw new CustomError("An ***unknown*** error occurred.", ErrorCode.InternalServerError, "Create General Role");
         }
     }
 
-    async sendInfo(value: CreateGeneralRoleRequest) : Promise<ButtonInteraction | undefined> {
+    async sendInfo(value: CreateGeneralRoleRequest): Promise<ButtonInteraction | undefined> {
         try {
             const infoEmbed = new EmbedBuilder()
-                .setAuthor({name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL()})
+                .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL() })
                 .setTitle("You are about to create a new role")
                 .setDescription("This role will be a general role for the server. It will be used to give user's permission to manage team data.\n" +
                     "Before you proceed, please make sure you have the necessary permissions to create a role.\n" +
                     "- Step 1: Enter the name of the role\n" +
                     "- Step 2: Choose permissions of the role\n" +
-                    "- Step 3: Confirm the creation of the role"+ 
+                    "- Step 3: Confirm the creation of the role" +
                     "\n\n" +
                     "Do you want to proceed?")
                 .setColor("Blue")
@@ -70,12 +70,12 @@ export default class CreateGeneralRoleHandler implements IMediatorHandle<CreateG
                 .setStyle(ButtonStyle.Danger);
             const btnRow = new ActionRowBuilder().addComponents(acceptButton, declineButton);
             // @ts-ignore
-            const infoMsg = await value.data.channel.send({embeds: [infoEmbed], components: [btnRow]});
+            const infoMsg = await value.data.channel.send({ embeds: [infoEmbed], components: [btnRow] });
 
             try {
-                const infoMsgInteraction = await infoMsg.awaitMessageComponent({ filter: i => i.user.id === value.data.author.id, time: 30000 , componentType: ComponentType.Button});
+                const infoMsgInteraction = await infoMsg.awaitMessageComponent({ filter: i => i.user.id === value.data.author.id, time: 30000, componentType: ComponentType.Button });
                 infoMsg.delete();
-                if(infoMsgInteraction.customId === "accept") {
+                if (infoMsgInteraction.customId === "accept") {
                     return infoMsgInteraction;
                 }
                 return undefined;
@@ -83,12 +83,12 @@ export default class CreateGeneralRoleHandler implements IMediatorHandle<CreateG
                 throw new CustomError("Time out", ErrorCode.UserCancelled, "Create General Role", error as Error);
             }
         } catch (error) {
-            if(error instanceof CustomError ) throw error;
+            if (error instanceof CustomError) throw error;
             throw new CustomError("An ***unknown*** error occurred.", ErrorCode.InternalServerError, "Create General Role", error as Error);
         }
     }
 
-    async getRoleName(value: CreateGeneralRoleRequest, interaction: ButtonInteraction) : Promise<string> {
+    async getRoleName(value: CreateGeneralRoleRequest, interaction: ButtonInteraction): Promise<string> {
         try {
             const nameInput = new TextInputBuilder()
                 .setPlaceholder("Enter the name of the role")
@@ -109,19 +109,19 @@ export default class CreateGeneralRoleHandler implements IMediatorHandle<CreateG
             try {
                 const infoModalResponse = await interaction.awaitModalSubmit({ filter: i => i.user.id === value.data.author.id, time: 30000 });
                 const roleName = infoModalResponse.fields.getTextInputValue("roleName");
-                infoModalResponse.reply({ content: "Role name has been set, role name:" + roleName , ephemeral: true });
+                infoModalResponse.reply({ content: "Role name has been set, role name:" + roleName, ephemeral: true });
                 return roleName;
             } catch (error) {
-                if(error instanceof CustomError ) throw error;
+                if (error instanceof CustomError) throw error;
                 throw new CustomError("An ***unknown*** error occurred.", ErrorCode.InternalServerError, "Create General Role", error as Error);
             }
         } catch (error) {
-            if(error instanceof CustomError ) throw error;
+            if (error instanceof CustomError) throw error;
             throw new CustomError("An ***unknown*** error occurred.", ErrorCode.InternalServerError, "Create General Role", error as Error);
         }
     }
 
-    async getRolePermissions(value: CreateGeneralRoleRequest, newRole: GeneralRole) : Promise<GeneralRole | undefined> {
+    async getRolePermissions(value: CreateGeneralRoleRequest, newRole: GeneralRole): Promise<GeneralRole | undefined> {
         try {
             do {
                 const currentPermissionString = newRole.getPermissionString();
@@ -138,13 +138,13 @@ export default class CreateGeneralRoleHandler implements IMediatorHandle<CreateG
                     }));
                 const permissionSelectRow = new ActionRowBuilder().addComponents(permissionSelect);
                 const permissionDashboardEmbed = new EmbedBuilder()
-                    .setAuthor({name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL()})
+                    .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL() })
                     .setTitle("Step 2: Manage Role Permission")
                     .setDescription("Select a permission to add or remove, if you pick an existing permission, it will be removed, if you pick a non-existing permission, it will be added.\n"
-                        +"When you finish, click the confirm button to proceed.")
+                        + "When you finish, click the confirm button to proceed.")
                     .setColor("Blue")
                     .setTimestamp()
-                .addFields({name: "Current permissions", value: currentPermissionString});
+                    .addFields({ name: "Current permissions", value: currentPermissionString });
 
                 const acceptButton = new ButtonBuilder()
                     .setCustomId("accept")
@@ -157,19 +157,19 @@ export default class CreateGeneralRoleHandler implements IMediatorHandle<CreateG
                 const btnRow = new ActionRowBuilder().addComponents(acceptButton, declineButton);
 
                 // @ts-ignore
-                const permissionDashboardMessage = await value.data.channel.send({embeds: [permissionDashboardEmbed], components: [permissionSelectRow, btnRow]});
+                const permissionDashboardMessage = await value.data.channel.send({ embeds: [permissionDashboardEmbed], components: [permissionSelectRow, btnRow] });
                 try {
                     const filter = (interaction: Interaction) => interaction.user.id === value.data.author.id;
-                    const interactionPermissionInteraction = await permissionDashboardMessage.awaitMessageComponent({ filter: filter, time: 60000});
-                    if(interactionPermissionInteraction.customId === "accept") {
+                    const interactionPermissionInteraction = await permissionDashboardMessage.awaitMessageComponent({ filter: filter, time: 60000 });
+                    if (interactionPermissionInteraction.customId === "accept") {
                         permissionDashboardMessage.delete();
                         return newRole;
                     }
-                    if(interactionPermissionInteraction.customId === "decline") {
+                    if (interactionPermissionInteraction.customId === "decline") {
                         permissionDashboardMessage.delete();
                         return undefined;
                     }
-                    if(interactionPermissionInteraction.isStringSelectMenu()) {
+                    if (interactionPermissionInteraction.isStringSelectMenu()) {
                         const selectedPermission = interactionPermissionInteraction.values[0];
                         const permission = parseInt(selectedPermission);
                         if (newRole.hasPermission(permission)) {
@@ -182,42 +182,42 @@ export default class CreateGeneralRoleHandler implements IMediatorHandle<CreateG
                     }
                     permissionDashboardMessage.delete();
                 } catch (error) {
-                    if(error instanceof CustomError ) throw error;
+                    if (error instanceof CustomError) throw error;
                     throw new CustomError("Time out", ErrorCode.InternalServerError, "Create General Role", error as Error);
                 }
             } while (true);
         } catch (error) {
-            if(error instanceof CustomError ) throw error;
+            if (error instanceof CustomError) throw error;
             throw new CustomError("An ***unknown*** error occurred.", ErrorCode.InternalServerError, "Create General Role", error as Error);
         }
     }
 
-    async saveToDatabase(value: CreateGeneralRoleRequest, newRole: GeneralRole) : Promise<GeneralRole> {
+    async saveToDatabase(value: CreateGeneralRoleRequest, newRole: GeneralRole): Promise<GeneralRole> {
         try {
             const statusEmbed = new EmbedBuilder()
-                .setAuthor({name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL()})
+                .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL() })
                 .setTitle("Saving new role to the database")
                 .setDescription("This is the information of the new role.\n Please wait while we save it to the database...")
                 .setColor("Blue")
                 .setFields([
-                    {name: "Role Name", value: newRole.Name},
-                    {name: "Role Permissions", value: newRole.getPermissionString()},
-                    {name: "Created At", value: newRole.CreatedAt.toUTCString()}
+                    { name: "Role Name", value: newRole.Name },
+                    { name: "Role Permissions", value: newRole.getPermissionString() },
+                    { name: "Created At", value: newRole.CreatedAt.toUTCString() }
                 ])
                 .setTimestamp();
-    
-            const statusMsg = await value.data.author.send({embeds: [statusEmbed]});
+
+            const statusMsg = await value.data.author.send({ embeds: [statusEmbed] });
             await value.data.customClient.dataSources.getRepository(GeneralRole).save(newRole);
             statusEmbed.setDescription("Role has been saved to the database.")
                 .setColor("Green")
                 .setTitle("Role has been saved")
                 .setTimestamp();
-            await statusMsg.edit({embeds: [statusEmbed]});
+            await statusMsg.edit({ embeds: [statusEmbed] });
             await delay(5000);
             statusMsg.delete();
             return newRole;
         } catch (error) {
-            if(error instanceof CustomError ) throw error;
+            if (error instanceof CustomError) throw error;
             throw new CustomError("Error when saving role to the database.", ErrorCode.InternalServerError, "Create General Role", error as Error);
         }
     }

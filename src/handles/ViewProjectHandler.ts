@@ -305,3 +305,10 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
     static async manageMember(value: ViewProjectRequest, project: Project): Promise<void> {
     }
 }
+
+
+class ProjectUtils {
+    public static async setRootChannel(client: CustomClient, project: Project, channel: TextChannel, author: User)  {
+
+    }
+}
