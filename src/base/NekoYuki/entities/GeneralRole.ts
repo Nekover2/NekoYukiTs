@@ -3,6 +3,7 @@ import IGeneralRole from "../interfaces/IGeneralRole";
 import Permission, { PermissionHelper } from "../enums/Permission";
 import Member from "./Member";
 import MemberGeneralRole from "./GeneralMemberRole";
+import GeneralRoleType from "../enums/GeneralRoleType";
 
 @Entity()
 export default class GeneralRole implements IGeneralRole {

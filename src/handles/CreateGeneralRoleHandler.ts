@@ -5,6 +5,7 @@ import IMediatorHandle from "../base/interfaces/IMediatorHandle";
 import CreateGeneralRoleRequest from "../requests/CreateGeneralRoleRequest";
 import Permission, { PermissionHelper } from "../base/NekoYuki/enums/Permission";
 import GeneralRole from "../base/NekoYuki/entities/GeneralRole";
+import GeneralRoleType from "../base/NekoYuki/enums/GeneralRoleType";
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export default class CreateGeneralRoleHandler implements IMediatorHandle<CreateGeneralRoleRequest> {
     name: string;

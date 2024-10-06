@@ -309,6 +309,10 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
             throw new CustomError("An error occurred while saving the project, project deleted.", ErrorCode.InternalServerError, "Create Project", error as Error);
         }
     }
+
+    async createPostChannel(value: CreateProjectRequest, project: Project): Promise<void> {
+        
+    }
 }
 
 class ProjectRequiredInformation {

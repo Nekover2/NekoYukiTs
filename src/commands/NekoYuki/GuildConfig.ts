@@ -5,7 +5,7 @@ import Category from "../../base/enums/Category";
 import Member from "../../base/NekoYuki/entities/Member";
 import CustomError from "../../base/classes/CustomError";
 import ErrorCode from "../../base/enums/ErrorCode";
-
+import GuildConfigRequest from "../../requests/GuildConfigRequest";
 export default class GuildConfig extends Command {
     constructor(client : CustomClient) {
         super(client, {
@@ -23,7 +23,7 @@ export default class GuildConfig extends Command {
     async Execute(interaction: ChatInputCommandInteraction, authorMember?: Member): Promise<void> {
         try {
             //@ts-ignore
-            const guildConfigRequest = new GuildConfigRequest(this.client, interaction.channel, interaction.user);
+            const guildConfigRequest = new GuildConfigRequest({client: this.client, channel: interaction.channel, author: interaction.user});
             const result = await this.client.mediator.send(guildConfigRequest);
         } catch (error) {
             if(error instanceof CustomError) {

@@ -31,10 +31,10 @@ export default class GuildConfigHandler implements IMediatorHandle<GuildConfigRe
                     await value.data.client.dataSources.getRepository(GuildConfig).save(newGuildConfig);
                     guildConfig = newGuildConfig;
                 }
-                let guildConfigInfoString = `Guild Configuration for ${value.data.channel.guild.name}:\n`;
-                guildConfigInfoString += `Root Novel Channel: <#${value.data.channel.guild.id}>\n`;
-                guildConfigInfoString += `Root Manga Channel: <#${value.data.channel.guild.id}>\n`;
-                guildConfigInfoString += `Root OLN Channel: <#${value.data.channel.guild.id}>\n`;
+                let guildConfigInfoString = `***Guild Configuration for ${value.data.channel.guild.name}:***\n`;
+                guildConfigInfoString += `- Root Novel Channel: <#${guildConfig.rootNovelChannelId}>\n`;
+                guildConfigInfoString += `- Root Manga Channel: <#${guildConfig.rootMangaChannelId}>\n`;
+                guildConfigInfoString += `- Root OLN Channel: <#${guildConfig.rootOLNChannelId}>\n`;
 
                 const guildConfigInfoEmbed = new EmbedBuilder()
                     .setTitle("Guild Configuration")
@@ -53,20 +53,22 @@ export default class GuildConfigHandler implements IMediatorHandle<GuildConfigRe
 
                 // @ts-ignore
                 const mainMsg = await value.data.channel.send({ embeds: [guildConfigInfoEmbed], components: [new ActionRowBuilder().addComponents(selectPropertyComponent)] });
-
+                let selectResult = "";
                 try {
                     const filter = (interaction: Interaction) => { return interaction.user.id === value.data.author.id; }
                     const choosePropertyInteraction = await mainMsg.awaitMessageComponent({ filter, time: 60000 });
                     mainMsg.delete();
-                    if (choosePropertyInteraction.isStringSelectMenu()) {
-                        if (choosePropertyInteraction.values[0] in ["novel", "manga", "oln"])
-                            mainFlag = await this.changeProperty(value, guildConfig, choosePropertyInteraction.values[0]);
-                    }
+                    if (choosePropertyInteraction.isStringSelectMenu()) selectResult = choosePropertyInteraction.values[0];
                 } catch (error) {
                     mainMsg.edit({ components: [] });
+                    return;
+                }
+                if (selectResult === "novel" || selectResult === "manga" || selectResult === "oln") {
+                    mainFlag = await this.changeProperty(value, guildConfig, selectResult);
                 }
             } while (mainFlag);
         } catch (error) {
+            console.log(error);
             if (error instanceof CustomError) throw error;
             throw new CustomError("An error occurred while changing guild options", ErrorCode.InternalServerError, "Guild Config", error as Error);
         }
@@ -105,7 +107,7 @@ export default class GuildConfigHandler implements IMediatorHandle<GuildConfigRe
                 const chooseChannelInteraction = await message.awaitMessageComponent({ filter, time: 300000 });
                 message.delete();
                 if (chooseChannelInteraction.customId === "guild_config_cancel") {
-                    return false;
+                    return true;
                 }
                 if (chooseChannelInteraction.isChannelSelectMenu()) {
                     targetChannelId = chooseChannelInteraction.channels.first()?.id || "";
