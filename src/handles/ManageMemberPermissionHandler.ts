@@ -70,7 +70,7 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
                     }
                     permissionSelectInteractionGlobal = permissionSelectInteraction;
                 } catch (error) {
-                    throw new CustomError("Failed to manage member permission due to inactive", ErrorCode.TimeOut, "Manage Member Permission", error as Error);
+                    permissionDashboardMessage.edit({ components: []});
                 }
                 try {
                     await value.data.client.dataSources.getRepository(Member).save(currMember);

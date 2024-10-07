@@ -9,6 +9,7 @@ import ProjectMember from "./ProjectMember";
 import IChapter from "../interfaces/IChapter";
 import Chapter from "./Chapter";
 import GeneralRole from "./GeneralRole";
+import ProjectType from "../enums/ProjectType";
 
 // TODO: Add builder pattern to this class
 
@@ -21,6 +22,9 @@ export default class Project implements IProject {
 
     @Column()
     name: string = "";
+
+    @Column()
+    type: ProjectType = ProjectType.Novel;
 
     @Column()
     lastUpdated: Date = new Date();

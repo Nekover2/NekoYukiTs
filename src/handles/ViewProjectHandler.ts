@@ -294,21 +294,27 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
             throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "View Project", error as Error);
         }
     }
-
-    static async editProject(value: ViewProjectRequest, project: Project): Promise<void> {
-        
-    }
-
-    static async deleteProject(value: ViewProjectRequest, project: Project): Promise<void> {
-    }
-
-    static async manageMember(value: ViewProjectRequest, project: Project): Promise<void> {
-    }
 }
 
 
 class ProjectUtils {
     public static async setRootChannel(client: CustomClient, project: Project, channel: TextChannel, author: User)  {
 
+    }
+
+    public static async getProjectType(client: CustomClient, project: Project, author: User) {
+        try {
+            
+        } catch (error) {
+            if(error instanceof CustomError) throw error;
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Get Project Type", error as Error);
+        }
+    }
+
+    public static async deleteProject(client: CustomClient, project: Project, author: User) {
+
+    }
+
+    public static async manageMember(client: CustomClient, project: Project, author: User) {
     }
 }
