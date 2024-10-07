@@ -35,7 +35,9 @@ export default class CreateGeneralRoleHandler implements IMediatorHandle<CreateG
             let newRole = new GeneralRole();
             newRole.Name = roleName;
             newRole.CreatedAt = new Date();
-            newRole.Type = GeneralRoleType.General;
+            const newRoleType = await this.getRoleType(value, newRole);
+            if (newRoleType === undefined) return;
+            newRole = newRoleType;
             const newFullyRole = await this.getRolePermissions(value, newRole);
             if (newFullyRole === undefined) return;
             const savedRole = await this.saveToDatabase(value, newFullyRole);
@@ -187,6 +189,49 @@ export default class CreateGeneralRoleHandler implements IMediatorHandle<CreateG
                     throw new CustomError("Time out", ErrorCode.InternalServerError, "Create General Role", error as Error);
                 }
             } while (true);
+        } catch (error) {
+            if (error instanceof CustomError) throw error;
+            throw new CustomError("An ***unknown*** error occurred.", ErrorCode.InternalServerError, "Create General Role", error as Error);
+        }
+    }
+
+    async getRoleType(value: CreateGeneralRoleRequest, newRole: GeneralRole): Promise<GeneralRole | undefined> {
+        try {
+            const infoEmbed = new EmbedBuilder()
+                .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL() })
+                .setTitle("Choose the type of the role")
+                .setDescription("Please choose the type of the role you want to create.\n" + 
+                    "1. General role is a role that can be used to manage team data. It will contain permissions in ***team scope*** and receive noti. Example: Novel Manager...\n" + 
+                    "2. Project role is a role that can be assign to members in a project. It will contain permission in ***project scope only***. Example: Novel translator,...\n" +
+                    "Please choose the type of the role you want to create. If you want to cancel, leave selection empty for 30 seconds.")
+                .setColor("Blue")
+                .setTimestamp();
+                const roleTypeSelect = new StringSelectMenuBuilder()
+                    .setCustomId("roleTypeSelect")
+                    .setPlaceholder("Select a role type")
+                    .addOptions([
+                        { label: "General Role", value: GeneralRoleType.General.toString() },
+                        { label: "Project Role", value: GeneralRoleType.Project.toString() }
+                    ]);
+                const roleTypeSelectRow = new ActionRowBuilder().addComponents(roleTypeSelect);
+                // @ts-ignore
+                const infoMsg = await value.data.channel.send({ embeds: [infoEmbed], components: [roleTypeSelectRow] });
+                try {
+                    const roleTypeInteraction = await infoMsg.awaitMessageComponent({ filter: i => i.user.id === value.data.author.id, time: 30000, componentType: ComponentType.StringSelect });
+                    infoMsg.delete();
+                    const roleType = roleTypeInteraction.values[0];
+                    if (roleType === GeneralRoleType.General.toString()) {
+                        newRole.Type = GeneralRoleType.General;
+                    } else if (roleType === GeneralRoleType.Project.toString()) {
+                        newRole.Type = GeneralRoleType.Project;
+                    }
+                    await roleTypeInteraction.reply({ content: "Role type has been set, role type:" + GeneralRoleType[newRole.Type], ephemeral: true });
+                    await delay(3000);
+                    await roleTypeInteraction.deleteReply();
+                    return newRole;
+                } catch (error) {
+                    infoMsg.delete();
+                }
         } catch (error) {
             if (error instanceof CustomError) throw error;
             throw new CustomError("An ***unknown*** error occurred.", ErrorCode.InternalServerError, "Create General Role", error as Error);

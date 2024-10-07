@@ -256,6 +256,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
 
             /////////////// Step 05: Handle project interaction ///////////////
             let globalBtnInteraction = null;
+            let globalSelectInteraction = null;
             try {
                 const projectInteraction = await projectInfoMsg.awaitMessageComponent({ filter: (interaction: Interaction) => interaction.user.id === author.id, time: 60000 });
                 await projectInfoMsg.delete();
@@ -263,7 +264,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                     globalBtnInteraction = projectInteraction;
                 }
                 if (projectInteraction.isStringSelectMenu()) {
-                    //TODO: add navigation handlers
+                    globalSelectInteraction = projectInteraction;
                 }
             } catch (error) {
                 await projectInfoMsg.edit({ components: [] });

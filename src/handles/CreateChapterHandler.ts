@@ -20,6 +20,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
         let permissionFlag = false;
         const memberPosition = currProject.members.find(member => member.member.discordId === value.data.author.id);
         if (memberPosition?.hasPermission(Permission.UpdateProject)) permissionFlag = true;
+        if (currProject.ownerId === value.data.author.id) permissionFlag = true;
         if (!permissionFlag) throw new CustomError("You do not have permission to create a chapter", ErrorCode.Forbidden, "Create Chapter");
         return permissionFlag;
     }

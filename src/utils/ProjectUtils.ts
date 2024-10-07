@@ -1,14 +1,9 @@
 import { ButtonInteraction, ButtonStyle, ChannelSelectMenuBuilder, ChannelType, ComponentType, EmbedBuilder, Interaction, ModalBuilder, StringSelectMenuInteraction, StringSelectMenuOptionBuilder, TextChannel, TextInputBuilder, TextInputStyle, User } from "discord.js";
 import CustomError from "../base/classes/CustomError";
 import ErrorCode from "../base/enums/ErrorCode";
-import IMediatorHandle from "../base/interfaces/IMediatorHandle";
 import Project from "../base/NekoYuki/entities/Project";
-import ViewProjectRequest from "../requests/ViewProjectRequest";
 import { ActionRowBuilder, ButtonBuilder, SelectMenuBuilder, StringSelectMenuBuilder, UserSelectMenuBuilder } from "@discordjs/builders";
-import CreateChapterRequest from "../requests/CreateChapterRequest";
 import Member from "../base/NekoYuki/entities/Member";
-import Permission from "../base/NekoYuki/enums/Permission";
-import ViewProjectChapterRequest from "../requests/ViewProjectChapterRequest";
 import CustomClient from "../base/classes/CustomClient";
 import { ProjectTypeHelper } from "../base/NekoYuki/enums/ProjectType";
 import GuildConfig from "../commands/NekoYuki/GuildConfig";
@@ -495,5 +490,9 @@ export default class ProjectUtils {
             if (error instanceof CustomError) throw error;
             throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Get Project Info", error as Error);
         }
+    }
+
+    public static async editProject(client: CustomClient, channel: TextChannel, project: Project, author: User) {
+
     }
 }
