@@ -25,11 +25,11 @@ export default class Member implements IMember {
     @Column()
     gmail: string = "";
 
-    @OneToMany(() => ProjectMember, projectMember => projectMember.member)
+    @OneToMany(() => ProjectMember, projectMember => projectMember.member, {onDelete: "CASCADE"})
     // @ts-ignore
     joinedProjects: IProjectMember[];
 
-    @OneToMany(() => MemberGeneralRole, generalMemerRole => generalMemerRole.member)
+    @OneToMany(() => MemberGeneralRole, generalMemerRole => generalMemerRole.member, {onDelete: "CASCADE"})
     // @ts-ignore
     generalRoles : MemberGeneralRole[];
 
@@ -45,6 +45,10 @@ export default class Member implements IMember {
             }
         }
         return false;
+    }
+
+    hasOwnPermission(permission: Permission): boolean {
+        return (this.permissions & permission) === permission;
     }
     addPermission(permission: Permission): void {
         this.permissions |= permission;

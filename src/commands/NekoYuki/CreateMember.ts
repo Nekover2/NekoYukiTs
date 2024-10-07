@@ -31,7 +31,7 @@ export default class CreateMember extends Command {
     async Execute(interaction: ChatInputCommandInteraction, authorMember: Member): Promise<void> {
         try {
             //@ts-ignore
-            const createMemberRequest = new CreateMemberRequest(this.client, interaction.channel as TextChannel, interaction.options.getUser("member"), interaction.user);
+            const createMemberRequest = new CreateMemberRequest({client: this.client, channel: interaction.channel as TextChannel, author: interaction.user, authorMember: authorMember, targetUser: interaction.options.getUser("member")});
             const result = await this.client.mediator.send(createMemberRequest);
         } catch (error) {
             if (error instanceof CustomError) {

@@ -207,7 +207,7 @@ export default class CreateGeneralRoleHandler implements IMediatorHandle<CreateG
                 ])
                 .setTimestamp();
 
-            const statusMsg = await value.data.author.send({ embeds: [statusEmbed] });
+            const statusMsg = await value.data.channel.send({ embeds: [statusEmbed] });
             await value.data.customClient.dataSources.getRepository(GeneralRole).save(newRole);
             statusEmbed.setDescription("Role has been saved to the database.")
                 .setColor("Green")

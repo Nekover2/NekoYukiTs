@@ -30,7 +30,7 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
     }
     async handle(value: CreateMemberRequest): Promise<Member> {
         try {
-            await this.checkPermissions(value);
+            //await this.checkPermissions(value);
 
             const newMember = new Member();
             newMember.discordId = value.data.targetUser.id;

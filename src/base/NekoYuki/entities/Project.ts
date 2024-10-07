@@ -27,6 +27,9 @@ export default class Project implements IProject {
     type: ProjectType = ProjectType.Novel;
 
     @Column()
+    link: string = "";
+
+    @Column()
     lastUpdated: Date = new Date();
 
     @Column()
@@ -47,11 +50,11 @@ export default class Project implements IProject {
     @Column()
     verified: boolean = false;
     
-    @OneToMany(() => ProjectMember, projectMember => projectMember.project)
+    @OneToMany(() => ProjectMember, projectMember => projectMember.project, {onDelete: "CASCADE"})
     // @ts-ignore
     members: IProjectMember[];
 
-    @OneToMany(() => Chapter, chapter => chapter.project)
+    @OneToMany(() => Chapter, chapter => chapter.project, {onDelete: "CASCADE"})
     //@ts-ignore
     chapters: IChapter[]
 

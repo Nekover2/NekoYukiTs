@@ -11,10 +11,13 @@ class ProjectTypeHelper {
         return Object.keys(ProjectType).filter((p) => isNaN(Number(p)));
     }
     static getProjectTypeValues() : string [] {
-        return Object.values(ProjectType).filter((p) => !isNaN(Number(p)));
+        return Object.values(ProjectType);
     }
     static getProjectTypeLabel(type: ProjectType) : string {
         return Object.keys(ProjectType).filter((p) => isNaN(Number(p)))[Object.values(ProjectType).indexOf(type)];
+    }
+    static getProjectTypeValue(type: string) : ProjectType {
+        return ProjectType[type as keyof typeof ProjectType];
     }
 }
 

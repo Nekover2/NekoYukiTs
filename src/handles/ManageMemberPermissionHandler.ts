@@ -17,7 +17,6 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
     }
     async handle(value: ManageMemberPermissionRequest): Promise<any> {
         try {
-            const permissionDashboardMessage = await value.data.channel.send("Permission Dashboard is loading...");
             do {
                 const currMember = await value.data.client.dataSources.getRepository(Member).findOne({
                     where: { discordId: value.data.targetUser?.id }
@@ -55,13 +54,15 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
 
                 let permissionSelectInteractionGlobal;
                 // @ts-ignore
-                await permissionDashboardMessage.edit({ content: "", embeds: [permissionDashboardEmbed], components: [permissionSelectRow] });
+                const permissionDashboardMessage = await value.data.channel.send({ content: "", embeds: [permissionDashboardEmbed], components: [permissionSelectRow] });
                 try {
                     const filter = (interaction: Interaction) => interaction.user.id === value.data.author.id;
-                    const permissionSelectInteraction = await value.data.channel.awaitMessageComponent({ filter, componentType: ComponentType.StringSelect, time: 60000 });
+                    const permissionSelectInteraction = await permissionDashboardMessage.awaitMessageComponent({ filter, componentType: ComponentType.StringSelect, time: 60000 });
+                    permissionDashboardMessage.delete();
+                    
                     const selectedPermission = permissionSelectInteraction.values[0];
                     const permission = parseInt(selectedPermission);
-                    if (currMember.hasPermission(permission)) {
+                    if (currMember.hasOwnPermission(permission)) {
                         await permissionSelectInteraction.reply({ content: `Permission will be removed: ${permissionLabel[permissionValue.indexOf(permission)]}`, ephemeral: true });
                         currMember.removePermission(permission);
                     } else {
@@ -70,7 +71,9 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
                     }
                     permissionSelectInteractionGlobal = permissionSelectInteraction;
                 } catch (error) {
+                    console.log(error);
                     permissionDashboardMessage.edit({ components: []});
+                    return false;
                 }
                 try {
                     await value.data.client.dataSources.getRepository(Member).save(currMember);

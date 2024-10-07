@@ -16,7 +16,7 @@ export default class GeneralRole implements IGeneralRole {
     Permissions: number = 0;
     @Column()
     CreatedAt: Date = new Date();
-    @OneToMany(() => MemberGeneralRole, generalMemerRole => generalMemerRole.role)
+    @OneToMany(() => MemberGeneralRole, generalMemerRole => generalMemerRole.role, {onDelete: "CASCADE"})
     // @ts-ignore
     Members: Member[];
     @Column() 

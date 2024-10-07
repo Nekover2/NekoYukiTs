@@ -9,6 +9,8 @@ import Project from "../base/NekoYuki/entities/Project";
 import ProjectMember from "../base/NekoYuki/entities/ProjectMember";
 import GeneralRole from "../base/NekoYuki/entities/GeneralRole";
 import ViewProjectRequest from "../requests/ViewProjectRequest";
+import ProjectUtils from "../utils/ProjectUtils";
+import GeneralRoleType from "../base/NekoYuki/enums/GeneralRoleType";
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export default class CreateProjectHandler implements IMediatorHandle<CreateProjectRequest> {
     name: string;
@@ -17,49 +19,55 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
         this.name = "CreateProject";
         this.ableToNavigate = true;
     }
+
+    async checkPermission(value: CreateProjectRequest): Promise<boolean> {
+        if (!value.data.authorMember)
+            throw new CustomError("You haven't registered yet", ErrorCode.UserCannotBeFound, "Create Project");
+        if (!value.data.authorMember.hasPermission(Permission.CreateProject))
+            throw new CustomError("You don't have permission to create a project", ErrorCode.Forbidden, "Create Project");
+        return true;
+    }
     async handle(value: CreateProjectRequest): Promise<any> {
         try {
             const messageList: Array<Message<true>> = [];
 
-            const authorMember = await value.data.client.dataSources.getRepository(Member).findOne({
-                where: { discordId: value.data.author.id }
-            });
-
-            if (!authorMember)
-                throw new CustomError("You haven't registered yet", ErrorCode.UserCannotBeFound, "Create Project");
-            if (!authorMember.hasPermission(Permission.CreateProject))
-                throw new CustomError("You don't have permission to create a project", ErrorCode.Forbidden, "Create Project");
-
-            // Step 2: send prompt to get project information
+            // Step 1: check permission
+            await this.checkPermission(value);
+            let newProject = new Project();
+            // Step 2: get project type.
+            const newProjectStep2 = await ProjectUtils.getProjectType(value.data.client, value.data.channel, newProject, value.data.author);
+            if (typeof newProjectStep2 === "boolean") return newProjectStep2;
+            newProject = newProjectStep2;
+            // Step 3: send prompt to get project information
             const infoInteraction = await this.sendInfo(value, messageList);
-            // Step 3: get project information
-            const projectInfoInput = await this.getBasicInformation(infoInteraction, messageList);
-
+            // Step 3.5: get project information
+            const newProjectStep3 = await ProjectUtils.getProjectStringProps(value.data.client, infoInteraction, newProject, value.data.author);
+            if (typeof newProjectStep3 === "boolean") return newProjectStep3;
+            newProject = newProjectStep3;
             // Side step: check if project with the same name exists
             const projectWithSameName = await value.data.client.dataSources.getRepository(Project).findOne({
-                where: { name: projectInfoInput.name }
+                where: { name: newProject.name }
             });
             if (projectWithSameName) {
                 throw new CustomError("Project with the same name already exists", ErrorCode.BadRequest, "Create Project");
             }
-
-            // Step 3.5: save project to database
-            let newProject = new Project();
-            newProject.name = projectInfoInput.name;
-            newProject.ownerId = authorMember.discordId;
+            newProject.ownerId = value.data.authorMember.discordId;
             newProject.lastUpdated = new Date();
+            // Step 4: Get project's root channel
+            const newProjectStep4 = await ProjectUtils.setRootChannel(value.data.client, newProject, value.data.channel, value.data.author);
+            if (typeof newProjectStep4 === "boolean") return newProjectStep4;
+            newProject = newProjectStep4;
             try {
                 await value.data.client.dataSources.getRepository(Project).save(newProject);
             } catch (error) {
                 throw new CustomError("An error occurred while saving the project to the database", ErrorCode.InternalServerError, "Create Project", error as Error);
             }
             const savedProject = await value.data.client.dataSources.getRepository(Project).findOne({
-                where: { name: projectInfoInput.name, ownerId: authorMember.discordId }
+                where: { name: newProject.name, ownerId: value.data.authorMember.discordId }
             });
             if (!savedProject) {
                 throw new CustomError("An error occurred while saving the project", ErrorCode.InternalServerError, "Create Project");
             }
-
             // Step 4: Get owner roles
             let ownerRoles = await this.getOwnerRoles(value, savedProject, messageList);
 
@@ -77,8 +85,15 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
     async sendInfo(value: CreateProjectRequest, messageList: Array<Message>): Promise<ButtonInteraction> {
         const projectInfoEmbed = new EmbedBuilder()
             .setTitle("Project Information")
-            .setDescription("Please provide the informations of the project you want to create. When you accept, we need you to provide some important information of the project. When you're ready, click the **accept** button.")
-            .setColor("Random")
+            .setDescription("Please provide the informations of the project you want to create.\n" +
+                `There're 4 steps to create a project:\n` +
+                `- ***Step 1.*** Choose project type\n` +
+                `- ***Step 2.*** Provide project information\n` +
+                `- ***Step 3. *** Set project's root channel\n` +
+                `- ***Step 4.*** Choose owner roles\n` +
+                "When you're ready, click the **accept** button."
+            )
+            .setColor("Blue")
             .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL() })
             .setFooter({ text: "NekoYuki's manager" })
             .setTimestamp();
@@ -116,40 +131,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
         }
     }
 
-    async getBasicInformation(infoInteraction: ButtonInteraction, messageList: Array<Message>): Promise<ProjectRequiredInformation> {
-        // Step 3: get project information
-        const getProjectInfoModal = new ModalBuilder()
-            .setCustomId("getProjectInfo")
-            .setTitle("Project Information");
 
-        const projectNameInput = new TextInputBuilder()
-            .setCustomId("projectName")
-            .setPlaceholder("Project Name")
-            .setLabel("Project Name")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-        const projectInputRow = new ActionRowBuilder()
-            .addComponents(projectNameInput);
-
-        //@ts-ignore
-        getProjectInfoModal.addComponents(projectInputRow);
-
-        await infoInteraction.showModal(getProjectInfoModal);
-        const projectInfoModalInteraction = await infoInteraction.awaitModalSubmit({ time: 60000 });
-        if (!projectInfoModalInteraction) {
-            throw new CustomError("Create project request cancelled", ErrorCode.TimeOut, "Create Project");
-        }
-        const projectName = projectInfoModalInteraction.fields.getTextInputValue("projectName");
-        if (!projectName) {
-            throw new CustomError("Project name is required", ErrorCode.BadRequest, "Create Project");
-        }
-        await projectInfoModalInteraction.deferReply({ ephemeral: true });
-        await projectInfoModalInteraction.editReply({ content: `Project name: ${projectName}` });
-        await delay(3000);
-        projectInfoModalInteraction.deleteReply();
-
-        return { name: projectName };
-    }
 
     async getOwnerRoles(value: CreateProjectRequest, project: Project, messageList: Array<Message>): Promise<ProjectMember[]> {
         try {
@@ -161,13 +143,18 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
             if (!currMember) {
                 throw new CustomError("You haven't registered yet", ErrorCode.UserCannotBeFound, "Create Project");
             }
-            const allRoles = await value.data.client.dataSources.getRepository(GeneralRole).find();
+            const allRoles = await value.data.client.dataSources.getRepository(GeneralRole).find({
+                where: { Type: GeneralRoleType.Project}
+            });
+            if(allRoles.length == 0) {
+                throw new CustomError("No role found, please add a project role before creating a project...", ErrorCode.BadRequest, "Create Project");
+            }
             do {
                 let ownerRolesString = ""
                 ownerRoles.forEach((role) => {
                     ownerRolesString += role.role.Name + ", ";
                 });
-                if(ownerRolesString.length == 0) ownerRolesString = "No role";
+                if (ownerRolesString.length == 0) ownerRolesString = "No role";
                 const roleSelect = new StringSelectMenuBuilder()
                     .setCustomId("roleSelect")
                     .setPlaceholder("Select a role")
@@ -179,7 +166,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
                             value: role.Id.toString()
                         }
                     }));
-                
+
                 const roleSelectRow = new ActionRowBuilder().addComponents(roleSelect);
                 const acceptButton = new ButtonBuilder()
                     .setCustomId("accept")
@@ -211,7 +198,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
                     await roleMsg.delete();
                     if (roleSelectInteraction.isButton()) {
                         if (roleSelectInteraction.customId === "accept") {
-                            if(ownerRoles.length == 0) {
+                            if (ownerRoles.length == 0) {
                                 const warningMsg = await roleSelectInteraction.reply({ content: "You must have at least one role", ephemeral: true });
                                 await delay(3000);
                                 await warningMsg.delete();
@@ -263,7 +250,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
         }
     }
 
-    async saveToDatabase(value: CreateProjectRequest, project: Project, projectMember: ProjectMember[]) : Promise<void> {
+    async saveToDatabase(value: CreateProjectRequest, project: Project, projectMember: ProjectMember[]): Promise<void> {
         const createProjectStatusEmbed = new EmbedBuilder()
             .setTitle(`Creating project ${project.name}`)
             .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL() })
@@ -310,8 +297,42 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
         }
     }
 
+    async getBasicInformation(infoInteraction: ButtonInteraction, messageList: Array<Message>): Promise<ProjectRequiredInformation> {
+        // Step 3: get project information
+        const getProjectInfoModal = new ModalBuilder()
+            .setCustomId("getProjectInfo")
+            .setTitle("Project Information");
+
+        const projectNameInput = new TextInputBuilder()
+            .setCustomId("projectName")
+            .setPlaceholder("Project Name")
+            .setLabel("Project Name")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+        const projectInputRow = new ActionRowBuilder()
+            .addComponents(projectNameInput);
+
+        //@ts-ignore
+        getProjectInfoModal.addComponents(projectInputRow);
+
+        await infoInteraction.showModal(getProjectInfoModal);
+        const projectInfoModalInteraction = await infoInteraction.awaitModalSubmit({ time: 60000 });
+        if (!projectInfoModalInteraction) {
+            throw new CustomError("Create project request cancelled", ErrorCode.TimeOut, "Create Project");
+        }
+        const projectName = projectInfoModalInteraction.fields.getTextInputValue("projectName");
+        if (!projectName) {
+            throw new CustomError("Project name is required", ErrorCode.BadRequest, "Create Project");
+        }
+        await projectInfoModalInteraction.deferReply({ ephemeral: true });
+        await projectInfoModalInteraction.editReply({ content: `Project name: ${projectName}` });
+        await delay(3000);
+        projectInfoModalInteraction.deleteReply();
+
+        return { name: projectName };
+    }
     async createPostChannel(value: CreateProjectRequest, project: Project): Promise<void> {
-        
+
     }
 }
 
