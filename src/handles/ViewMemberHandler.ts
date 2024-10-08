@@ -100,11 +100,12 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
     async viewMember(value: ViewMemberRequest, member: User, sentMsg: Array<Message>): Promise<void> {
         try {
             const yukiMember = await value.data.client.dataSources.getRepository(Member).createQueryBuilder("member")
-                .where("member.discordId = :discordId", { discordId: member.id })
+                .where("member.discordId = :discordId", { discordId: value.data.targetUser?.id })
                 .leftJoin('member.joinedProjects', 'project')
                 .leftJoinAndSelect('member.generalRoles', 'generalRole')
                 .loadRelationCountAndMap("member.joinedProjectCount", "member.joinedProjects")
                 .getOne();
+            
             if (!yukiMember) {
                 throw new CustomError("Member is not registered", ErrorCode.UserCannotBeFound, "view-member");
             }
@@ -151,7 +152,7 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
             }
             switch (userReacion) {
                 case "viewProjectStatistic":
-                    const viewMemberProjectRequest = new ViewMemberProjectRequest(value.data.client, value.data.channel, value.data.author, yukiMember, member);
+                    const viewMemberProjectRequest = new ViewMemberProjectRequest(value.data.client, value.data.channel, value.data.author, value.data.authorMember, member);
                     await value.data.client.mediator.send(viewMemberProjectRequest);
                     break;
                 case "editMember":

@@ -206,7 +206,7 @@ export default class ProjectUtils {
         }
     }
 
-    public static async manageMember(client: CustomClient, channel: TextChannel, project: Project, author: User) {
+    public static async manageMember(client: CustomClient, channel: TextChannel, project: Project, author: User) : Promise<boolean> {
         try {
             if (project.members) {
                 const tmpProject = await client.dataSources.getRepository(Project).findOne({
@@ -277,15 +277,16 @@ export default class ProjectUtils {
                 infoMsg.delete();
                 if (interaction.isButton()) {
                     if (interaction.customId == "cancelBtn")
-                        return false;
+                        return true;
                     if (interaction.customId == "addMember")
-                        // TODO add after complete add member into a project
+                        await ProjectUtils.addMemberToProject(client, channel, project, author);
                         return true;
                 }
             } catch (error) {
                 await infoMsg.edit({ components: [] });
                 return false;
             }
+            return true;
         } catch (error) {
             if (error instanceof CustomError) throw error;
             throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Manage Member", error as Error);
@@ -492,7 +493,7 @@ export default class ProjectUtils {
         }
     }
 
-    public static async editProject(client: CustomClient, channel: TextChannel, project: Project, author: User) {
-
+    public static async editProject(client: CustomClient, channel: TextChannel, project: Project, author: User) : Promise<boolean> {
+        return true;
     }
 }
