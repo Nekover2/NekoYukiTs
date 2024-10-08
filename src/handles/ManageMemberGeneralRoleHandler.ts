@@ -50,7 +50,7 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
                 .setPlaceholder("Select a member");
             const userRow = new ActionRowBuilder().addComponents(userSelect);
             // @ts-ignore
-            const chooseUserMsg = await currChannel.send({ embeds: [chooseMemberEmbed], components: [userRow] });
+            const chooseUserMsg = await value.data.channel.send({ embeds: [chooseMemberEmbed], components: [userRow] });
 
             try {
                 const userFilter = (interaction: Interaction) => interaction.user.id === value.data.author.id;
@@ -130,7 +130,7 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
                 const roleRow = new ActionRowBuilder().addComponents(roleSelect);
 
                 // @ts-ignore
-                const chooseRoleMsg = await currChannel.send({ embeds: [chooseRoleEmbed], components: [roleRow, btnRow] });
+                const chooseRoleMsg = await value.data.channel.send({ embeds: [chooseRoleEmbed], components: [roleRow, btnRow] });
 
                 try {
                     const roleFilter = (interaction: Interaction) => interaction.user.id === value.data.author.id;
