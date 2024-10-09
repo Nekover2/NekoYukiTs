@@ -203,7 +203,7 @@ export default class ViewProjectChapterHandler implements IMediatorHandle<ViewPr
             const filter = (interaction: Interaction) => interaction.user.id === value.data.author.discordId;
             const btnInteraction = await message.awaitMessageComponent({ filter, time: 60000, componentType: ComponentType.Button });
             message.delete();
-            // TODO: add edit and delete chapter functionality
+            
             switch (btnInteraction.customId) {
                 case "createChapter":
                     return await value.data.customClient.mediator.send(new CreateChapterRequest(

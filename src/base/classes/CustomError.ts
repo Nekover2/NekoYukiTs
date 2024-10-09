@@ -1,7 +1,5 @@
 import ErrorCode from "../enums/ErrorCode";
 
-
-// TODO: Change instances of all handler and command in codebase to use this class
 export default class CustomError extends Error {
     errorCode: ErrorCode;
     origin : string;

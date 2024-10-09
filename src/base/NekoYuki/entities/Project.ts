@@ -1,6 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import MemberStatus from "../enums/MemberStatus";
-import Permission from "../enums/Permission";
+import Permission, { PermissionHelper } from "../enums/Permission";
 import ProjectStatus from "../enums/ProjectStatus";
 import IMember from "../interfaces/IMember";
 import IProject from "../interfaces/IProject";
@@ -11,7 +11,6 @@ import Chapter from "./Chapter";
 import GeneralRole from "./GeneralRole";
 import ProjectType from "../enums/ProjectType";
 
-// TODO: Add builder pattern to this class
 
 @Entity()
 export default class Project implements IProject {
@@ -81,8 +80,6 @@ export default class Project implements IProject {
         });
         this.members.push(newMember);
         return newMember;
-        // create a new project member
-        // TODO: wait for the IProjectMember interface to be implemented
     }
     removeMember(member: IMember): void {
         const index = this.members.findIndex((m) => m.member.discordId === member.discordId);
@@ -131,7 +128,6 @@ export default class Project implements IProject {
         return permissions;
     }
     permissionString(member: IMember): string {
-        //TODO : Correctly implement this method
-        throw new Error("Method not implemented.");
+        return PermissionHelper.getPermissionString(this.getAllPermissions(member));
     }
 }

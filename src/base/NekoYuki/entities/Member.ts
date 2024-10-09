@@ -7,7 +7,6 @@ import ProjectMember from "./ProjectMember";
 import MemberGeneralRole from "./GeneralMemberRole";
 
 
-// TODO: Add builder pattern to this class
 @Entity()
 export default class Member implements IMember {
     @PrimaryColumn()

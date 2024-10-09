@@ -33,9 +33,6 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                 value.data.projectId = await ViewProjectHandler.chooseProject(value);
             if (!value.data.projectId) return;
             await ViewProjectHandler.viewProject(value.data.client, value.data.channel, value.data.author, yukiMember, value.data.projectId);
-            // TODO: add navigation buttons
-            // TODO: rebuild project query
-            // TODO: clean messages after done
         } catch (error) {
             if (error instanceof CustomError) {
                 throw error;

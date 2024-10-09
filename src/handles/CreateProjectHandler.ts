@@ -285,7 +285,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
             await createProjectStatusMsg.edit({ content: "", embeds: [createProjectStatusEmbed] });
             await delay(5000);
             await createProjectStatusMsg.delete();
-            // TODO: send request to project viewer to view the project
+            
             await value.data.client.mediator.send(new ViewProjectRequest(value.data.client, value.data.channel, value.data.author, value.data.authorMember, project.id.toString()));
         } catch (error) {
             if (error instanceof CustomError) {

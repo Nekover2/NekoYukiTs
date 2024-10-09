@@ -15,8 +15,14 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
         this.name = "ManageMemberGeneralRole";
         this.ableToNavigate = false;
     }
+
+    async checkPermission(value: ManageMemberGeneralRoleRequest): Promise<boolean> {
+        // TODO: Check permission
+        return true;
+    }
     async handle(value: ManageMemberGeneralRoleRequest): Promise<any> {
         try {
+            await this.checkPermission(value);
             const member = await this.chooseMember(value);
             await this.manageMemberGeneralRole(value, member);
         } catch (error) {
@@ -81,7 +87,7 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
         }
     }
 
-    async manageMemberGeneralRole(value: ManageMemberGeneralRoleRequest, targetMember: Member): Promise<void> {
+    async manageMemberGeneralRole(value: ManageMemberGeneralRoleRequest, targetMember: Member): Promise<boolean> {
         try {
             const currMember = Object.assign({}, targetMember);
             const roleList = await value.data.customClient.dataSources.getRepository(GeneralRole).find();
@@ -131,52 +137,13 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
 
                 // @ts-ignore
                 const chooseRoleMsg = await value.data.channel.send({ embeds: [chooseRoleEmbed], components: [roleRow, btnRow] });
-
+                let endingStr = "-1";
                 try {
                     const roleFilter = (interaction: Interaction) => interaction.user.id === value.data.author.id;
                     const roleSelectInteraction = await chooseRoleMsg.awaitMessageComponent({ filter: roleFilter, time: 60000 });
                     chooseRoleMsg.delete();
                     if (roleSelectInteraction.isButton()) {
-                        if (roleSelectInteraction.customId === "finish") {
-                            await value.data.customClient.dataSources.getRepository(Member).save(currMember);
-                            for (const role of currMember.generalRoles) {
-                                await value.data.customClient.dataSources.getRepository(MemberGeneralRole).save(role);
-                            }
-                            const finishEmbed = new EmbedBuilder()
-                                .setAuthor({ name: value.data.author.username, iconURL: value.data.author.displayAvatarURL() })
-                                .setColor("Green")
-                                .setTitle("General Role Management")
-                                .setDescription(`Successfully managed general role for <@${currMember.discordId}>.`)
-                                .addFields([
-                                    { name: "Current Roles", value: currMember.generalRoles.map(role => role.role.Name).join(", ") || "No Role" }
-                                ])
-                                .setTimestamp()
-                                .setFooter({ text: "Powered by NekoYuki" });
-                            let resultMsg = await value.data.channel.send({ embeds: [finishEmbed] });
-                            await delay(5000);
-                            if (resultMsg.deletable) {
-                                resultMsg.delete();
-                            }
-                            return;
-                        }
-                        if (roleSelectInteraction.customId === "cancel") {
-                            const cancelEmbed = new EmbedBuilder()
-                                .setAuthor({ name: value.data.author.username, iconURL: value.data.author.displayAvatarURL() })
-                                .setColor("Red")
-                                .setTitle("General Role Management")
-                                .setDescription(`Cancelled general role management for <@${currMember.discordId}>. All changes are reverted.`)
-                                .addFields([
-                                    { name: "Current Roles", value: targetMember.generalRoles.map(role => role.role.Name).join(", ") || "No Role" }
-                                ])
-                                .setTimestamp()
-                                .setFooter({ text: "Powered by NekoYuki" });
-                            let resultMsg = await value.data.channel.send({ embeds: [cancelEmbed] });
-                            await delay(5000);
-                            if (resultMsg.deletable) {
-                                resultMsg.delete();
-                            }
-                            return;
-                        }
+                        endingStr = roleSelectInteraction.customId;
                     }
 
                     if (roleSelectInteraction.isStringSelectMenu()) {
@@ -196,8 +163,50 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
                         }
                     }
                 } catch (error) {
-                    if (error instanceof CustomError) throw error;
-                    throw new CustomError("Time out", ErrorCode.TimeOut, "Manage Member General Role", error as Error);
+                    chooseRoleMsg.edit({ components: [] });
+                    return false;
+                }
+
+                if(endingStr == "-1") return false;
+                if (endingStr === "finish") {
+                    await value.data.customClient.dataSources.getRepository(Member).save(currMember);
+                    for (const role of currMember.generalRoles) {
+                        await value.data.customClient.dataSources.getRepository(MemberGeneralRole).save(role);
+                    }
+                    const finishEmbed = new EmbedBuilder()
+                        .setAuthor({ name: value.data.author.username, iconURL: value.data.author.displayAvatarURL() })
+                        .setColor("Green")
+                        .setTitle("General Role Management")
+                        .setDescription(`Successfully managed general role for <@${currMember.discordId}>.`)
+                        .addFields([
+                            { name: "Current Roles", value: currMember.generalRoles.map(role => role.role.Name).join(", ") || "No Role" }
+                        ])
+                        .setTimestamp()
+                        .setFooter({ text: "Powered by NekoYuki" });
+                    let resultMsg = await value.data.channel.send({ embeds: [finishEmbed] });
+                    await delay(5000);
+                    if (resultMsg.deletable) {
+                        resultMsg.delete();
+                    }
+                    return true;
+                }
+                if (endingStr === "cancel") {
+                    const cancelEmbed = new EmbedBuilder()
+                        .setAuthor({ name: value.data.author.username, iconURL: value.data.author.displayAvatarURL() })
+                        .setColor("Red")
+                        .setTitle("General Role Management")
+                        .setDescription(`Cancelled general role management for <@${currMember.discordId}>. All changes are reverted.`)
+                        .addFields([
+                            { name: "Current Roles", value: targetMember.generalRoles.map(role => role.role.Name).join(", ") || "No Role" }
+                        ])
+                        .setTimestamp()
+                        .setFooter({ text: "Powered by NekoYuki" });
+                    let resultMsg = await value.data.channel.send({ embeds: [cancelEmbed] });
+                    await delay(5000);
+                    if (resultMsg.deletable) {
+                        resultMsg.delete();
+                    }
+                    return true;
                 }
             } while (true);
         } catch (error) {
