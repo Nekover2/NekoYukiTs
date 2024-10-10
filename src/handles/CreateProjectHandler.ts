@@ -72,7 +72,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
             let ownerRoles = await this.getOwnerRoles(value, savedProject, messageList);
 
             // Step 5: save to database
-            await this.saveToDatabase(value, savedProject, ownerRoles);
+            await this.saveToDatabase(value, savedProject, [ownerRoles]);
         } catch (error) {
 
             if (error instanceof CustomError) {
@@ -133,9 +133,12 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
 
 
 
-    async getOwnerRoles(value: CreateProjectRequest, project: Project, messageList: Array<Message>): Promise<ProjectMember[]> {
+    async getOwnerRoles(value: CreateProjectRequest, project: Project, messageList: Array<Message>): Promise<ProjectMember> {
         try {
-            let ownerRoles: ProjectMember[] = [];
+            let ownerRoles = new ProjectMember();
+            ownerRoles.member = value.data.authorMember;
+            ownerRoles.project = project;
+            ownerRoles.isOwner = true;
             const currMember = await value.data.client.dataSources.getRepository(Member).findOne({
                 where: { discordId: value.data.author.id },
                 relations: ["generalRoles"]
@@ -144,16 +147,14 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
                 throw new CustomError("You haven't registered yet", ErrorCode.UserCannotBeFound, "Create Project");
             }
             const allRoles = await value.data.client.dataSources.getRepository(GeneralRole).find({
-                where: { Type: GeneralRoleType.Project}
+                where: { Type: GeneralRoleType.Project }
             });
-            if(allRoles.length == 0) {
+            if (allRoles.length == 0) {
                 throw new CustomError("No role found, please add a project role before creating a project...", ErrorCode.BadRequest, "Create Project");
             }
             do {
                 let ownerRolesString = ""
-                ownerRoles.forEach((role) => {
-                    ownerRolesString += role.role.Name + ", ";
-                });
+                if (ownerRoles.role) ownerRolesString = ownerRoles.role.Name;
                 if (ownerRolesString.length == 0) ownerRolesString = "No role";
                 const roleSelect = new StringSelectMenuBuilder()
                     .setCustomId("roleSelect")
@@ -180,9 +181,9 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
                 const btnRow = new ActionRowBuilder().addComponents(acceptButton, cancelButton);
 
                 const roleDashboardEmbed = new EmbedBuilder()
-                    .setTitle(`Step 2/2, choose role for ${value.data.author.displayName}`)
+                    .setTitle(`Next step, choose role for ${value.data.author.displayName}`)
                     .setDescription(`After choose your name, you need to specify your role in project ${project.name}\n. Note that:` +
-                        "\n- 1. You can only have many roles in a project" +
+                        "\n- 1. You can only have one role in a project" +
                         "\n- 2. Picking an existing role will remove it" +
                         "\n- 3. Picking a new role will add it" +
                         "***When you're done, click the accept button, we will save all your provided information to the database***")
@@ -198,7 +199,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
                     await roleMsg.delete();
                     if (roleSelectInteraction.isButton()) {
                         if (roleSelectInteraction.customId === "accept") {
-                            if (ownerRoles.length == 0) {
+                            if (ownerRoles.role) {
                                 const warningMsg = await roleSelectInteraction.reply({ content: "You must have at least one role", ephemeral: true });
                                 await delay(3000);
                                 await warningMsg.delete();
@@ -216,19 +217,9 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
                         if (!role) {
                             throw new CustomError("Role not found", ErrorCode.BadRequest, "Create Project");
                         }
-                        const roleIndex = ownerRoles.findIndex((r) => r.role.Id === role.Id);
-                        if (roleIndex === -1) {
-                            const newRole = new ProjectMember();
-                            newRole.member = currMember;
-                            newRole.project = project;
-                            newRole.role = role;
-                            newRole.isOwner = true;
-                            ownerRoles.push(newRole);
-                            await roleSelectInteraction.reply({ content: `Role ${role.Name} has been added`, ephemeral: true });
-                        } else {
-                            await roleSelectInteraction.reply({ content: `Role ${role.Name} has been removed`, ephemeral: true });
-                            ownerRoles.splice(roleIndex, 1);
-                        }
+
+                        await roleSelectInteraction.reply({ content: `Role ${role.Name} has been set`, ephemeral: true });
+                        ownerRoles.role = role;
                         await delay(2000);
                     }
                 } catch (error) {
@@ -285,7 +276,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
             await createProjectStatusMsg.edit({ content: "", embeds: [createProjectStatusEmbed] });
             await delay(5000);
             await createProjectStatusMsg.delete();
-            
+
             await value.data.client.mediator.send(new ViewProjectRequest(value.data.client, value.data.channel, value.data.author, value.data.authorMember, project.id.toString()));
         } catch (error) {
             if (error instanceof CustomError) {

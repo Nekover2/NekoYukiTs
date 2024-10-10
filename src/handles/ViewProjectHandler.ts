@@ -10,11 +10,6 @@ import Member from "../base/NekoYuki/entities/Member";
 import Permission from "../base/NekoYuki/enums/Permission";
 import ViewProjectChapterRequest from "../requests/ViewProjectChapterRequest";
 import CustomClient from "../base/classes/CustomClient";
-import { ProjectTypeHelper } from "../base/NekoYuki/enums/ProjectType";
-import GuildConfig from "../commands/NekoYuki/GuildConfig";
-import GeneralRole from "../base/NekoYuki/entities/GeneralRole";
-import GeneralRoleType from "../base/NekoYuki/enums/GeneralRoleType";
-import ProjectMember from "../base/NekoYuki/entities/ProjectMember";
 import ProjectUtils from "../utils/ProjectUtils";
 
 export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRequest> {
@@ -194,22 +189,67 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
 
                 /////////////// Step 04.01: Build project action row ///////////////
                 console.log(yukiMember);
-                
+
                 let hasProjectPermission = false;
                 let hasAdvancedProjectPermission = false;
-
+                let hasVerifiedProjectPermission = false;
                 if (yukiMember.discordId == project.ownerId) {
                     hasProjectPermission = true;
                     hasAdvancedProjectPermission = true;
                 }
-                if (yukiMember.hasPermission(Permission.MangeProject)) {
+                if (yukiMember.hasPermission(Permission.ManageProject)) {
                     hasProjectPermission = true;
                     hasAdvancedProjectPermission = true;
+                    hasVerifiedProjectPermission = true;
                 }
                 if (yukiMember.hasPermission(Permission.UpdateProject)) hasProjectPermission = true;
                 if (project.members.find(m => m.member.discordId === yukiMember.discordId)) hasProjectPermission = true;
 
                 /////////////// Step 04.2: Build project context row ///////////////
+                /////////////// Because the limit of 5 buttons per row, we need to create select component///////////////
+                const contextSelectMenu = new StringSelectMenuBuilder()
+                    .setCustomId("contextSelect")
+                    .setPlaceholder("Select an action");
+                if (hasProjectPermission) {
+                    contextSelectMenu.addOptions(
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel("Create chapter")
+                            .setValue("createChapter"),
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel("Edit project")
+                            .setValue("editProject"),
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel("Manage member")
+                            .setValue("manageMember"),
+                    );
+                }
+                if (hasAdvancedProjectPermission) {
+                    contextSelectMenu.addOptions(
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel("Delete project")
+                            .setValue("deleteProject"),
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel("Transfer project")
+                            .setValue("transferProject"),
+                    );
+                }
+                if (hasVerifiedProjectPermission) {
+                    contextSelectMenu.addOptions(
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel("Verify project")
+                            .setValue("verifyProject"),
+                    );
+                }
+                contextSelectMenu.addOptions(
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel("View chapter")
+                        .setValue("viewChapter"),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel("Return")
+                        .setValue("return"),
+                );
+                const contextSelectRow = new ActionRowBuilder()
+                    .addComponents(contextSelectMenu);
                 const contextRows = [];
                 const createChapterBtn = new ButtonBuilder()
                     .setCustomId("createChapter")
@@ -231,11 +271,23 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                     .setCustomId("deleteProject")
                     .setLabel("Delete project")
                     .setStyle(ButtonStyle.Danger);
-                const editRow = new ActionRowBuilder()
+                const transferProjectBtn = new ButtonBuilder()
+                    .setCustomId("transferProject")
+                    .setLabel("Transfer project")
+                    .setStyle(ButtonStyle.Primary);
+                const verifyProjectBtn = new ButtonBuilder()
+                    .setCustomId("verifyProject")
+                    .setLabel("Verify project")
+                    .setStyle(ButtonStyle.Success);
+                const returnBtn = new ButtonBuilder()
+                    .setCustomId("return")
+                    .setLabel("Return")
+                    .setStyle(ButtonStyle.Secondary);
+                const editRow = new ActionRowBuilder();
 
                 if (hasProjectPermission) {
                     viewChapterBtn.setLabel("Manage chapters");
-                    editRow.addComponents(createChapterBtn, viewChapterBtn, editProjectBtn, manageMemberBtn);
+                    editRow.setComponents(createChapterBtn, viewChapterBtn, manageMemberBtn);
                 } else {
                     viewChapterBtn.setLabel("View chapters");
                     editRow.setComponents(viewChapterBtn);
@@ -243,7 +295,11 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                 if (hasAdvancedProjectPermission) {
                     editRow.addComponents(deleteProjectBtn);
                 }
-                contextRows.push(editRow);
+                if (hasVerifiedProjectPermission) {
+                    editRow.setComponents(verifyProjectBtn);
+                }
+                editRow.addComponents(returnBtn);
+                contextRows.push(editRow, contextSelectRow);
                 // @ts-ignore   
                 const projectInfoMsg = await currChannel.send({ embeds: [projectEmbed], components: contextRows });
 
@@ -263,10 +319,17 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                     await projectInfoMsg.edit({ components: [] });
                     return false;
                 }
-                if (!globalBtnInteraction) return false;
                 const globalBtnInteractionAfter = globalBtnInteraction as ButtonInteraction;
+                const globalSelectInteractionAfter = globalSelectInteraction as StringSelectMenuInteraction;
+                let commandId = "";
+                if (globalSelectInteraction) {
+                    commandId = globalSelectInteractionAfter.values[0];
+                }
+                if (globalBtnInteraction) {
+                    commandId = globalBtnInteractionAfter.customId;
+                }
                 try {
-                    switch (globalBtnInteractionAfter.customId) {
+                    switch (commandId) {
                         case "createChapter":
                             const createChapterRequest = new CreateChapterRequest(client, currChannel, author, yukiMember, project)
                             const createResult = await client.mediator.send(createChapterRequest);
@@ -280,6 +343,25 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                         case "editProject":
                             const editResult = await ProjectUtils.editProject(client, currChannel, project, author);
                             if (editResult == true) loopFlag = true;
+                            break;
+                        case "manageMember":
+                            const manageMemberResult = await ProjectUtils.manageMember(client, currChannel, project, author);
+                            if (manageMemberResult == true) loopFlag = true;
+                            break;
+                        case "deleteProject":
+                            const deleteResult = await ProjectUtils.deleteProject(client, currChannel, project, author);
+                            if (deleteResult == true) loopFlag = true;
+                            break;
+                        case "transferProject":
+                            const transferResult = await ProjectUtils.transferProject(client, currChannel, project, author);
+                            if (transferResult == true) loopFlag = true;
+                            break;
+                        case "verifyProject":
+                            const verifyResult = await ProjectUtils.verifyProject(client, currChannel, project, author, yukiMember);
+                            if (verifyResult == true) loopFlag = true;
+                            break;
+                        case "return":
+                            return true;
                         default:
                             break;
                     }

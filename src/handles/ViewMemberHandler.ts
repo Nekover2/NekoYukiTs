@@ -114,7 +114,7 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
                     throw new CustomError("Member is not registered", ErrorCode.UserCannotBeFound, "view-member");
                 }
                 const memberEmbed = new EmbedBuilder()
-                    .setAuthor({ name: member.username, iconURL: member.displayAvatarURL() })
+                    .setAuthor({ name: value.data.author.username, iconURL: value.data.author.displayAvatarURL() })
                     .setColor("Blue")
                     .setTitle(`Member ${member.username} information`)
                     .setDescription(`This is the information of member ${member.username}, you can see the projects they have joined, their roles, permissions, etc. If you have permission, you can edit this information.`)
@@ -143,7 +143,7 @@ export default class ViewMemberHandler implements IMediatorHandle<ViewMemberRequ
                 
                 // Check if author have permission to manage member info...
                 let editMemberFlag = false;
-                if(value.data.authorMember.hasPermission(Permission.MangeMember)) editMemberFlag = true;
+                if(value.data.authorMember.hasPermission(Permission.ManageMember)) editMemberFlag = true;
                 if(editMemberFlag) actionRow.addComponents(editMemberBtn);
                 actionRow.addComponents(returnBtn);
                 // @ts-ignore

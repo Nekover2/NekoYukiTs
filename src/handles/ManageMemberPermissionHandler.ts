@@ -17,7 +17,7 @@ export default class ManageMemberPermissionHandler implements IMediatorHandle<Ma
     }
     async checkPermission(value: ManageMemberPermissionRequest) {
         let hasPermission = false;
-        if (value.data.authorMember.hasPermission(Permission.MangeMember)) {
+        if (value.data.authorMember.hasPermission(Permission.ManageMember)) {
             hasPermission = true;
         }
         if (value.data.author.id == value.data.channel.guild.ownerId) {

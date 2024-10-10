@@ -19,7 +19,7 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
         if(!value.data.authorMember){
             throw new CustomError("Author is not a member", ErrorCode.UserCannotBeFound, "Create Member");
         }
-        if(!value.data.authorMember.hasPermission(Permission.MangeMember)) {
+        if(!value.data.authorMember.hasPermission(Permission.ManageMember)) {
             throw new CustomError("Author does not have permission to manage members", ErrorCode.Forbidden, "Create Member");
         }
         const existingMember = await value.data.client.dataSources.getRepository(Member).findOne({ where: { discordId: value.data.targetUser.id} });

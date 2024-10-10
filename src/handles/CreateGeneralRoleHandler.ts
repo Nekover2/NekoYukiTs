@@ -17,7 +17,7 @@ export default class CreateGeneralRoleHandler implements IMediatorHandle<CreateG
 
     async checkPermission(value: CreateGeneralRoleRequest): Promise<boolean> {
         let hasPermission = false;
-        if (value.data.authorMember.hasPermission(Permission.MangePermission)) {
+        if (value.data.authorMember.hasPermission(Permission.ManagePermission)) {
             hasPermission = true;
         }
         if (!hasPermission) {

@@ -10,6 +10,7 @@ import GuildConfig from "../commands/NekoYuki/GuildConfig";
 import GeneralRole from "../base/NekoYuki/entities/GeneralRole";
 import GeneralRoleType from "../base/NekoYuki/enums/GeneralRoleType";
 import ProjectMember from "../base/NekoYuki/entities/ProjectMember";
+import Permission from "../base/NekoYuki/enums/Permission";
 export default class ProjectUtils {
     public static async setRootChannel(client: CustomClient, project: Project, channel: TextChannel, author: User, guildConfig?: GuildConfig) {
         try {
@@ -206,7 +207,7 @@ export default class ProjectUtils {
         }
     }
 
-    public static async manageMember(client: CustomClient, channel: TextChannel, project: Project, author: User) : Promise<boolean> {
+    public static async manageMember(client: CustomClient, channel: TextChannel, project: Project, author: User): Promise<boolean> {
         try {
             if (project.members) {
                 const tmpProject = await client.dataSources.getRepository(Project).findOne({
@@ -248,48 +249,197 @@ export default class ProjectUtils {
                 infoBtn.setDisabled(true);
                 contextComponents.push(btnRow);
             } else {
+                const guildMembers = await client.guilds.cache.get(channel.guild.id)?.members.fetch();
+                if (!guildMembers) {
+                    throw new CustomError("Failed to fetch guild members", ErrorCode.InternalServerError, "Manage Member");
+                }
                 const memberSelectListTmp = project.members.map((m) => {
-                    const discordMember = channel.guild.members.cache.get(m.member.discordId);
+                    const discordMember = guildMembers.get(m.member.discordId);
                     if (!discordMember) return;
                     return new StringSelectMenuOptionBuilder()
                         .setLabel(discordMember.displayName)
                         .setValue(m.member.discordId);
                 });
                 const memberSelectList = memberSelectListTmp.filter((m) => m !== undefined);
-                const memberSelectMenu = new StringSelectMenuBuilder()
-                    .setCustomId("memberSelect")
-                    .setPlaceholder("Select a member")
-                    .addOptions(memberSelectList);
-                const memberSelectRow = new ActionRowBuilder()
-                    .addComponents(memberSelectMenu);
+                if (memberSelectList.length == 0) {
+                    infoMessage.setDescription("No member found, please add a new member using `Add member` button below.");
+                    infoBtn.setDisabled(true);
+                    contextComponents.push(btnRow);
+                }
+                else {
+                    const memberSelectMenu = new StringSelectMenuBuilder()
+                        .setCustomId("memberSelect")
+                        .setPlaceholder("Select a member")
+                        .addOptions(memberSelectList);
+                    const memberSelectRow = new ActionRowBuilder()
+                        .addComponents(memberSelectMenu);
 
-                contextComponents.push(memberSelectRow);
-                contextComponents.push(btnRow);
+                    contextComponents.push(memberSelectRow);
+                    contextComponents.push(btnRow);
+                }
             }
 
             //@ts-ignore
             const infoMsg = await channel.send({ embeds: [infoMessage], components: contextComponents });
 
-            const selectedMemberId = "-1";
+            let selectedMemberId = "-1";
+            let selectedBtnId = "-1";
             try {
                 const filter = (interaction: Interaction) => interaction.user.id === author.id;
                 const interaction = await infoMsg.awaitMessageComponent({ filter, time: 60000 });
                 infoMsg.delete();
-                if (interaction.isButton()) {
-                    if (interaction.customId == "cancelBtn")
-                        return true;
-                    if (interaction.customId == "addMember")
-                        await ProjectUtils.addMemberToProject(client, channel, project, author);
-                        return true;
-                }
+                if (interaction.isButton()) selectedBtnId = interaction.customId;
+                if (interaction.isStringSelectMenu()) selectedMemberId = interaction.values[0];
             } catch (error) {
                 await infoMsg.edit({ components: [] });
                 return false;
+            }
+            switch (selectedBtnId) {
+                case "cancelBtn":
+                    return true;
+                case "addMember":
+                    await ProjectUtils.addMemberToProject(client, channel, project, author);
+                    return true;
+                default:
+                    break;
+            }
+
+            if (selectedMemberId === "-1") return false;
+            else {
+                const selectedProjectMember = project.members.find(m => m.member.discordId === selectedMemberId);
+                if (!selectedProjectMember) return false;
+                await ProjectUtils.editMember(client, channel, project, selectedProjectMember, author);
+                return true;
             }
             return true;
         } catch (error) {
             if (error instanceof CustomError) throw error;
             throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Manage Member", error as Error);
+        }
+    }
+
+    public static async editMember(client: CustomClient, channel: TextChannel, project: Project, projectMember: ProjectMember, author: User) {
+        try {
+            const chooseRoleEmbed = new EmbedBuilder()
+                .setAuthor({ name: author.username, iconURL: author.displayAvatarURL() })
+                .setColor("Aqua")
+                .setTimestamp()
+                .setFooter({ text: "Powered by NekoYuki" })
+                .setTitle("Step 1/1: Choose action for the member")
+                .setDescription("Please choose a role for the member, or you can remove member from the project by clicking `Remove member` button below")
+                .setFields([
+                    { name: "Member", value: `<@${projectMember.member.discordId}>` },
+                    { name: "Current role", value: projectMember.role.Name }
+                ]);
+            const allRoles = await client.dataSources.getRepository(GeneralRole).find(
+                {
+                    where: { Type: GeneralRoleType.Project }
+                }
+            );
+            if (allRoles.length == 0) {
+                throw new CustomError("No role found, please add a project role first.", ErrorCode.BadRequest, "Add Member");
+            }
+
+            const roleSelectMenu = new StringSelectMenuBuilder()
+                .setCustomId("roleSelect")
+                .setPlaceholder("Select a role")
+                .setMaxValues(1)
+                .setMinValues(1)
+                .setOptions(
+                    allRoles.map((role) => new StringSelectMenuOptionBuilder()
+                        .setLabel(role.Name)
+                        .setValue(role.Id.toString())
+                    )
+                );
+            const roleSelectActionRow = new ActionRowBuilder()
+                .addComponents(roleSelectMenu);
+
+            const deleteMemberBtn = new ButtonBuilder()
+                .setCustomId("deleteMember")
+                .setLabel("Remove member")
+                .setStyle(ButtonStyle.Danger);
+            const cancelBtn = new ButtonBuilder()
+                .setCustomId("cancelBtn")
+                .setLabel("Cancel")
+                .setStyle(ButtonStyle.Secondary);
+            const actionRow = new ActionRowBuilder()
+                .addComponents(deleteMemberBtn, cancelBtn);
+
+            //@ts-ignore
+            const roleSelectMsg = await channel.send({ embeds: [chooseRoleEmbed], components: [roleSelectActionRow, actionRow] });
+            let selectedRoleId = "-1";
+            let selectedBtnId = "-1";
+
+            try {
+                const filter = (interaction: Interaction) => interaction.user.id === author.id;
+                const roleSelectInteraction = await roleSelectMsg.awaitMessageComponent({ filter, time: 60000 });
+                roleSelectMsg.delete();
+                if (roleSelectInteraction.isButton()) {
+                    selectedBtnId = roleSelectInteraction.customId;
+                }
+                if (roleSelectInteraction.isStringSelectMenu()) {
+                    selectedRoleId = roleSelectInteraction.values[0];
+                }
+            } catch (error) {
+                roleSelectMsg.edit({ components: [] });
+                return false;
+            }
+
+            if (selectedBtnId === "-1") return false;
+            switch (selectedBtnId) {
+                case "cancelBtn":
+                    return true;
+                case "deleteMember":
+                    if (project.ownerId === projectMember.member.discordId) {
+                        const warningEmbed = new EmbedBuilder()
+                            .setAuthor({ name: author.username, iconURL: author.displayAvatarURL() })
+                            .setColor("Red")
+                            .setTimestamp()
+                            .setFooter({ text: "Powered by NekoYuki" })
+                            .setTitle("Warning")
+                            .setDescription("You are trying to remove the owner of the project, please choose another member to be the owner first.");
+                        const warningMsg = await channel.send({ embeds: [warningEmbed] });
+                        const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+                        await delay(3000);
+                        warningMsg.delete();
+                        return true;
+                    }
+                    const statusEmbed = new EmbedBuilder()
+                        .setAuthor({ name: author.username, iconURL: author.displayAvatarURL() })
+                        .setColor("Blue")
+                        .setTimestamp()
+                        .setFooter({ text: "Powered by NekoYuki" })
+                        .setTitle("Please wait when we are working...")
+                        .setDescription(`Removing <@${projectMember.member.discordId}> from the project ${project.name}\n This may take 5-6 seconds, please wait...`);
+                    const statusMsg = await channel.send({ embeds: [statusEmbed] });
+                    await client.dataSources.getRepository(ProjectMember).delete({
+                        id: projectMember.id,
+                        project: project
+                    });
+                    const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+                    await delay(3000);
+                    statusEmbed.setTitle("Success");
+                    statusEmbed.setColor("Green");
+                    statusEmbed.setDescription(`Successfully removed <@${projectMember.member.discordId}> from the project ${project.name}`);
+                    await statusMsg.edit({ embeds: [statusEmbed] });
+                    await delay(3000);
+                    statusMsg.delete();
+                    return true;
+            }
+            if (selectedRoleId === "-1") return false;
+            else {
+                const currRole = allRoles.find(r => r.Id.toString() === selectedRoleId);
+                if (!currRole) {
+                    throw new CustomError("Role not found", ErrorCode.BadRequest, "Edit Member");
+                }
+                projectMember.role = currRole;
+                await client.dataSources.getRepository(ProjectMember).save(projectMember);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            if (error instanceof CustomError) throw error;
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Edit Member", error as Error);
         }
     }
 
@@ -375,7 +525,7 @@ export default class ProjectUtils {
             const roleSelectActionRow = new ActionRowBuilder()
                 .addComponents(roleSelectMenu);
 
-            
+
             const chooseRoleEmbed = new EmbedBuilder()
                 .setAuthor({ name: author.username, iconURL: author.displayAvatarURL() })
                 .setColor("Aqua")
@@ -383,7 +533,7 @@ export default class ProjectUtils {
                 .setFooter({ text: "Powered by NekoYuki" })
                 .setTitle("Step 2/2: Choose role")
                 .setDescription("Please choose a role for the member");
-            
+
             //@ts-ignore
             const roleSelectMsg = await channel.send({ embeds: [chooseRoleEmbed], components: [roleSelectActionRow, actionRow] });
             let selectedRoleId = "-1";
@@ -413,7 +563,7 @@ export default class ProjectUtils {
             }
             newProjectMember.role = currRole;
             newProjectMember.project = project;
-            
+
             const statusEmbed = new EmbedBuilder()
                 .setAuthor({ name: author.username, iconURL: author.displayAvatarURL() })
                 .setColor("Blue")
@@ -440,7 +590,7 @@ export default class ProjectUtils {
         }
     }
 
-    public static async getProjectStringProps(client: CustomClient, btnInteraction : ButtonInteraction, project: Project, author: User) {
+    public static async getProjectStringProps(client: CustomClient, btnInteraction: ButtonInteraction, project: Project, author: User) {
         try {
             const getInfoModal = new ModalBuilder()
                 .setTitle("Project information...")
@@ -456,9 +606,9 @@ export default class ProjectUtils {
                 .setPlaceholder(project.link == "" ? project.link : "Project link")
                 .setStyle(TextInputStyle.Short)
                 .setLabel("Project link");
-            
-            if(project.name == "") nameInput.setRequired(true);
-            if(project.link == "") linkInput.setRequired(true);
+
+            if (project.name == "") nameInput.setRequired(true);
+            if (project.link == "") linkInput.setRequired(true);
 
             const nameInputActionRow = new ActionRowBuilder()
                 .addComponents(nameInput);
@@ -480,8 +630,8 @@ export default class ProjectUtils {
                 const nameInputRes = interaction.fields.getTextInputValue("nameInput");
                 const linkInputRes = interaction.fields.getTextInputValue("linkInput");
 
-                if(nameInputRes) project.name = nameInputRes;
-                if(linkInputRes) project.link = linkInputRes;
+                if (nameInputRes) project.name = nameInputRes;
+                if (linkInputRes) project.link = linkInputRes;
                 return project;
             } catch (error) {
                 throw new CustomError("An ***unknown*** error occurred while receiving info from project modal.", ErrorCode.InternalServerError, "Get Project Info", error as Error);
@@ -493,7 +643,123 @@ export default class ProjectUtils {
         }
     }
 
-    public static async editProject(client: CustomClient, channel: TextChannel, project: Project, author: User) : Promise<boolean> {
+    public static async transferProject(client: CustomClient, channel: TextChannel, project: Project, author: User) {
+        try {
+            const infoEmbed = new EmbedBuilder()
+                .setAuthor({ name: author.username, iconURL: author.displayAvatarURL() })
+                .setTitle("Next step: Choose a new owner for the project")
+                .setDescription("Please choose a new owner for the project" + project.name +
+                    "\n***Note:*** *The new owner must be a registered user in the server and already have a role in this project*"
+                )
+                .setColor("Aqua")
+                .setTimestamp()
+                .setFooter({ text: "Powered by NekoYuki" });
+            const guildMembers = await client.guilds.cache.get(channel.guild.id)?.members.fetch();
+            if (!guildMembers) {
+                throw new CustomError("Failed to fetch guild members", ErrorCode.InternalServerError, "Manage Member");
+            }
+            const memberSelectListTmp = project.members.map((m) => {
+                const discordMember = guildMembers.get(m.member.discordId);
+                if (!discordMember) return;
+                return new StringSelectMenuOptionBuilder()
+                    .setLabel(discordMember.displayName)
+                    .setValue(m.member.discordId);
+            });
+            const memberSelectList = memberSelectListTmp.filter((m) => m !== undefined);
+            if (memberSelectList.length == 0) {
+                throw new CustomError("No member found, please add a member to the project first.", ErrorCode.BadRequest, "Transfer Project");
+            }
+
+            const memberSelectMenu = new StringSelectMenuBuilder()
+                .setCustomId("memberSelect")
+                .setPlaceholder("Select a member")
+                .addOptions(memberSelectList);
+            const memberSelectRow = new ActionRowBuilder()
+                .addComponents(memberSelectMenu);
+            const memberSelectActionRow = new ActionRowBuilder()
+                .addComponents(memberSelectMenu);
+
+            //@ts-ignore
+            const memberSelectMsg = await channel.send({ embeds: [infoEmbed], components: [memberSelectActionRow] });
+
+            let selectedUser = author;
+            try {
+                const filter = (interaction: Interaction) => interaction.user.id === author.id;
+                const memberSelectInteraction = await memberSelectMsg.awaitMessageComponent({ filter, time: 60000 });
+                memberSelectMsg.delete();
+                if (memberSelectInteraction.isUserSelectMenu()) {
+                    const selectingUser = memberSelectInteraction.users?.first();
+                    if (selectingUser) {
+                        selectedUser = selectingUser;
+                    }
+                }
+            } catch (error) {
+                memberSelectMsg.edit({ components: [] });
+                return false;
+            }
+
+            // Check if user is registered
+            const member = await client.dataSources.getRepository(Member).findOne({
+                where: { discordId: selectedUser.id }
+            });
+            if (!member) {
+                throw new CustomError("User is not registered", ErrorCode.BadRequest, "Transfer Project");
+            }
+
+            const statusEmbed = new EmbedBuilder()
+                .setAuthor({ name: author.username, iconURL: author.displayAvatarURL() })
+                .setColor("Blue")
+                .setTimestamp()
+                .setFooter({ text: "Powered by NekoYuki" })
+                .setTitle("Please wait when we are working on it")
+                .setDescription(`Transferring the project ${project.name} to <@${selectedUser.id}>\n This may take 5-6 seconds, please wait...`);
+            const statusMsg = await channel.send({ embeds: [statusEmbed] });
+
+            project.ownerId = member.discordId;
+            await client.dataSources.getRepository(Project).save(project);
+            const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+            await delay(3000);
+
+            statusEmbed.setTitle("Success");
+            statusEmbed.setColor("Green");
+            statusEmbed.setDescription(`Successfully transferred the project ${project.name} to <@${selectedUser.id}>`);
+            await statusMsg.edit({ embeds: [statusEmbed] });
+            await delay(3000);
+            statusMsg.delete();
+            return true;
+        } catch (error) {
+            if (error instanceof CustomError) throw error;
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Transfer Project", error as Error);
+        }
+    }
+
+    public static async verifyProject(client: CustomClient, channel: TextChannel, project: Project, author: User, authorMember: Member) {
+        try {
+            if (!authorMember.hasPermission(Permission.ManageProject)) throw new CustomError("You don't have permission to verify project", ErrorCode.Forbidden, "Verify Project");
+            if (project.verified) throw new CustomError("Project is already verified", ErrorCode.BadRequest, "Verify Project");
+            project.verified = true;
+            await client.dataSources.getRepository(Project).save(project);
+            const successEmbed = new EmbedBuilder()
+                .setAuthor({ name: author.username, iconURL: author.displayAvatarURL() })
+                .setColor("Green")
+                .setTimestamp()
+                .setFooter({ text: "Powered by NekoYuki" })
+                .setTitle("Success")
+                .setDescription(`Project ${project.name} has been verified successfully`);
+            const successMsg = await channel.send({ embeds: [successEmbed] });
+            const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+            await delay(3000);
+            successMsg.delete();
+            return true;
+        } catch (error) {
+            if (error instanceof CustomError) throw error;
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Verify Project", error as Error);
+        }
+    }
+    public static async editProject(client: CustomClient, channel: TextChannel, project: Project, author: User): Promise<boolean> {
+        // TODO: Implement edit project
         return true;
     }
+
+
 }
