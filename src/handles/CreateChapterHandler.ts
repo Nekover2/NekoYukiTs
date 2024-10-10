@@ -34,7 +34,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
                 relations: ["members"]
             });
             if (!currProject) throw new CustomError("Project not found", ErrorCode.BadRequest, "Create Chapter");
-            
+
             await this.checkPermission(value, currProject);
             // STEP 2: Create a chapter
             const infoInteraction = await this.preSetup(value, currProject, sentMsgs);
@@ -113,6 +113,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
                 .setCustomId("chapter-name")
                 .setPlaceholder("Chapter Name")
                 .setLabel("Chapter Name")
+                .setMaxLength(64)
                 .setStyle(TextInputStyle.Short)
                 .setRequired(true);
             const chapterLinkInput = new TextInputBuilder()

@@ -1,1 +1,3 @@
-- Reimplement create project guide
+// TODO: Check input props
+// TODO: notification when event emitted.
+// TODO: auto get project info from link (novel is ln.hako.vn, manga is mangadex)
