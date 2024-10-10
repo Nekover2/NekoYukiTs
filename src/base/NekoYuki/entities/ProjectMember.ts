@@ -16,10 +16,10 @@ export default class ProjectMember implements IProjectMember {
     id: number;
 
     @ManyToOne(() => Member, member => member.joinedProjects)
-    member: IMember = new Member();
+    member: Member = new Member();
 
     @ManyToOne(() => Project, project => project.members)
-    project: IProject = new Project();
+    project: Project = new Project();
 
     @ManyToOne(() => GeneralRole, generalRole => generalRole.Members)
     @JoinColumn()

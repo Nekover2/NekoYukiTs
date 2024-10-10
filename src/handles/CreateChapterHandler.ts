@@ -6,6 +6,7 @@ import Project from "../base/NekoYuki/entities/Project";
 import Permission from "../base/NekoYuki/enums/Permission";
 import CreateChapterRequest from "../requests/CreateChapterRequest";
 import Chapter from "../base/NekoYuki/entities/Chapter";
+import ChapterMember from "../base/NekoYuki/entities/ChapterMember";
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export default class CreateChapterHandler implements IMediatorHandle<CreateChapterRequest> {
@@ -43,7 +44,7 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
             if (!chapterInfo) return;
             const newChapter = await this.saveChapter(value, currProject, chapterInfo);
             value.data.client.nekoYukiEvent.emit("ChapterCreated", newChapter);
-            return;
+            return true;
         } catch (error) {
             if (error instanceof CustomError) {
                 throw error;
@@ -163,7 +164,12 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
                 .setColor("Orange")
                 .setTimestamp()
                 .setFooter({ text: "NekoYuki's manager" })
-                .setDescription("Saving chapter to database...")
+                .setDescription("Saving chapter to database...\n" +
+                    "Step 1: Checking if chapter already exists...\n" +
+                    "Step 2: Saving chapter to database...\n"+
+                    "Step 3: Updating project last updated date...\n" +
+                    "Step 4: Saving chapter's members to database..."
+                )
                 .addFields([
                     { name: "Chapter Name", value: chapterInfo.name },
                     { name: "Chapter Link", value: chapterInfo.link },
@@ -185,16 +191,51 @@ export default class CreateChapterHandler implements IMediatorHandle<CreateChapt
                 progressMsg.delete();
                 return savedChapter;
             }
-            await value.data.client.dataSources.getRepository(Chapter).save(newChapter);
+            progressEmbed
+            .setDescription("Saving chapter to database...\n" +
+                "Step 1: Checking if chapter already exists... ***Done***\n" +
+                "Step 2: Saving chapter to database...\n"+
+                "Step 3: Updating project last updated date...\n" +
+                "Step 4: Saving chapter's members to database..."
+            );
+            await progressMsg.edit({ embeds: [progressEmbed] });
+            delay(1000);
+            let newlySavedChapter = await value.data.client.dataSources.getRepository(Chapter).save(newChapter);
+
+            progressEmbed
+                .setDescription("Saving chapter to database...\n" +
+                    "Step 1: Checking if chapter already exists... ***Done***\n" +
+                    "Step 2: Saving chapter to database... ***Done***\n"+
+                    "Step 3: Updating project last updated date...\n" +
+                    "Step 4: Saving chapter's members to database..."
+                );
+            await progressMsg.edit({ embeds: [progressEmbed] });
+            delay(1000);
             project.lastUpdated = new Date();
             await value.data.client.dataSources.getRepository(Project).save(project);
+            progressEmbed
+                .setDescription("Saving chapter to database...\n" +
+                    "Step 1: Checking if chapter already exists... ***Done***\n" +
+                    "Step 2: Saving chapter to database... ***Done***\n"+
+                    "Step 3: Updating project last updated date... ***Done***\n" +
+                    "Step 4: Saving chapter's members to database... ***SKIP***"
+                );
+            await progressMsg.edit({ embeds: [progressEmbed] });
+            delay(1000);
+
+            // // Save chapter members
+            // project.members.forEach(async member => {
+            //     const chapterMember = new ChapterMember();
+            //     chapterMember.chapter = newlySavedChapter;
+            //     chapterMember.member = member.member;
+            //     await value.data.client.dataSources.getRepository(ChapterMember).save(chapterMember);
+            // });
             progressEmbed
                 .setColor("Green")
                 .setDescription("Chapter saved successfully! returning...");
             await progressMsg.edit({ embeds: [progressEmbed] });
             await delay(2000);
             progressMsg.delete();
-
             const savedChapter2 = await value.data.client.dataSources.getRepository(Chapter).findOne({
                 where: { title: newChapter.title, link: newChapter.link },
                 relations: ["project"]

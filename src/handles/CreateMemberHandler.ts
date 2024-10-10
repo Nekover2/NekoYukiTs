@@ -16,7 +16,7 @@ export default class CreateMemberHandler implements IMediatorHandle<CreateMember
     }
 
     async checkPermissions(value: CreateMemberRequest): Promise<boolean> {
-        let flag = false;
+        let flag = true;
         if (!value.data.authorMember) {
             throw new CustomError("Author is not a member", ErrorCode.UserCannotBeFound, "Create Member");
         }

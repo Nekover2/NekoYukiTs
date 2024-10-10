@@ -185,7 +185,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
                     .setDescription(`After choose your name, you need to specify your role in project ${project.name}\n. Note that:` +
                         "\n- 1. You can only have one role in a project" +
                         "\n- 2. Picking an existing role will remove it" +
-                        "\n- 3. Picking a new role will add it" +
+                        "\n- 3. Picking a new role will add it\n " +
                         "***When you're done, click the accept button, we will save all your provided information to the database***")
                     .setColor("Blue")
                     .setAuthor({ name: value.data.author.displayName, iconURL: value.data.author.displayAvatarURL() })
@@ -199,7 +199,7 @@ export default class CreateProjectHandler implements IMediatorHandle<CreateProje
                     await roleMsg.delete();
                     if (roleSelectInteraction.isButton()) {
                         if (roleSelectInteraction.customId === "accept") {
-                            if (ownerRoles.role) {
+                            if (!ownerRoles.role) {
                                 const warningMsg = await roleSelectInteraction.reply({ content: "You must have at least one role", ephemeral: true });
                                 await delay(3000);
                                 await warningMsg.delete();

@@ -2,6 +2,7 @@ import { Column, Entity, JoinTable, ManyToOne, OneToMany, OneToOne, PrimaryGener
 import IChapter from "../interfaces/IChapter";
 import IProject from "../interfaces/IProject";
 import Project from "./Project";
+import ChapterMember from "./ChapterMember";
 
 @Entity()
 export default class Chapter implements IChapter {
@@ -19,4 +20,8 @@ export default class Chapter implements IChapter {
     @ManyToOne(() => Project, project => project.chapters)
     //@ts-ignore
     project: IProject;
+
+    @OneToMany(() => ChapterMember, chapterMember => chapterMember.chapter)
+    // @ts-ignore
+    chapterMembers: ChapterMember[];
 }

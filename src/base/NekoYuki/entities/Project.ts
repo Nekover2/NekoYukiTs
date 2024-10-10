@@ -10,6 +10,7 @@ import IChapter from "../interfaces/IChapter";
 import Chapter from "./Chapter";
 import GeneralRole from "./GeneralRole";
 import ProjectType from "../enums/ProjectType";
+import Member from "./Member";
 
 
 @Entity()
@@ -60,7 +61,7 @@ export default class Project implements IProject {
 
     membersCount: number = -1;
     chaptersCount: number = -1;
-    addMember(member: IMember, roles: GeneralRole, permissions: Permission[]): IProjectMember | undefined {
+    addMember(member: Member, roles: GeneralRole, permissions: Permission[]): IProjectMember | undefined {
         // find the member in the members array
         const oldMember = this.members.find((m) => m.member.discordId === member.discordId);
         if (oldMember) {

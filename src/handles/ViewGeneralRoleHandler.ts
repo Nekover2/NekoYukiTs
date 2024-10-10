@@ -41,7 +41,7 @@ export default class ViewGeneralRoleHandler implements IMediatorHandle<ViewGener
                         `- 2. **General Role** - Use for determine member's role in the team\n` +
                         `Please choose an action to continue...`)
                     .addFields([
-                        { name: "Total General Role", value: `${allRoleCount}`, inline: true },
+                        { name: "Total General Role", value: `${allRoleCount - projectRoleCount}`, inline: true },
                         { name: "Total Project Role", value: `${projectRoleCount}`, inline: true }
                     ])
                     .setColor("Blue")

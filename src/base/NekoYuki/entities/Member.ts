@@ -5,6 +5,7 @@ import IMember from "../interfaces/IMember";
 import IProjectMember from "../interfaces/IProjectMember";
 import ProjectMember from "./ProjectMember";
 import MemberGeneralRole from "./GeneralMemberRole";
+import ChapterMember from "./ChapterMember";
 
 
 @Entity()
@@ -32,6 +33,9 @@ export default class Member implements IMember {
     // @ts-ignore
     generalRoles : MemberGeneralRole[];
 
+    @OneToMany(() => ChapterMember, chapterMember => chapterMember.member, {onDelete: "CASCADE"})
+    // @ts-ignore
+    chapterAttended: ChapterMember[];
     joinedProjectCount : number = -1;
 
     hasPermission(permission: Permission): boolean {
