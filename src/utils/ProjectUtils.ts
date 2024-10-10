@@ -758,8 +758,99 @@ export default class ProjectUtils {
     }
     public static async editProject(client: CustomClient, channel: TextChannel, project: Project, author: User): Promise<boolean> {
         // TODO: Implement edit project
+        try {
+            const editInfoEmbed = new EmbedBuilder()
+                .setAuthor({ name: author.username, iconURL: author.displayAvatarURL() })
+                .setTitle(`Edit project: ${project.name}`)
+                .setDescription("Below is your current project information, please click on the edit button to start editing")
+                .setColor("Aqua")
+                .setFields([
+                    { name: "Project name", value: project.name },
+                    { name: "Project ID", value: project.id.toString() },
+                    { name: "Project type", value: ProjectTypeHelper.getProjectTypeLabel(project.type) },
+                    { name: "Project status", value: project.status.toString() },
+                    { name: "Owner", value: `<@${project.ownerId}>` },
+                    { name: "Last updated", value: project.lastUpdated.toDateString() },
+                ])
+                .setTimestamp()
+                .setFooter({ text: "Powered by NekoYuki" });
+            const editBtn = new ButtonBuilder()
+                .setCustomId("editBtn")
+                .setLabel("Edit")
+                .setStyle(ButtonStyle.Success);
+            const cancelBtn = new ButtonBuilder()
+                .setCustomId("cancelBtn")
+                .setLabel("Cancel")
+                .setStyle(ButtonStyle.Secondary);
+
+            const actionRow = new ActionRowBuilder()
+                .addComponents(editBtn, cancelBtn);
+            
+            //@ts-ignore
+            const editMsg = await channel.send({ embeds: [editInfoEmbed], components: [actionRow] });
+            let editBtnInteraction : ButtonInteraction;
+            try {
+                const filter = (interaction: Interaction) => interaction.user.id === author.id;
+                editBtnInteraction = await editMsg.awaitMessageComponent({ filter, time: 60000, componentType: ComponentType.Button });
+                editMsg.delete();
+            } catch (error) {
+                editMsg.edit({ components: [] });
+                return false;
+            }
+            if (editBtnInteraction.customId === "cancelBtn") return true;
+            const getInfoModal = new ModalBuilder()
+                .setCustomId("getInfoModal")
+                .setTitle("Edit your project's information");
+            
+            const nameInput = new TextInputBuilder()
+                .setCustomId("nameInput")
+                .setPlaceholder(project.name)
+                .setStyle(TextInputStyle.Short)
+                .setLabel("Project name");
+            const nameInputActionRow = new ActionRowBuilder()
+                .addComponents(nameInput);
+            const linkInput = new TextInputBuilder()
+                .setCustomId("linkInput")
+                .setPlaceholder(project.link)
+                .setStyle(TextInputStyle.Short)
+                .setLabel("Project link");
+            const linkInputActionRow = new ActionRowBuilder()
+                .addComponents(linkInput);
+
+            //@ts-ignore
+            getInfoModal.addComponents(nameInputActionRow, linkInputActionRow);
+
+            const infoMsg = await editBtnInteraction.showModal(getInfoModal);
+            try {
+                const filter = (interaction: Interaction) => interaction.user.id === author.id;
+                const interaction = await editBtnInteraction.awaitModalSubmit({ filter, time: 60000 });
+                await interaction.reply("Received your input, please wait...");
+                const nameInputRes = interaction.fields.getTextInputValue("nameInput");
+                const linkInputRes = interaction.fields.getTextInputValue("linkInput");
+
+                if (nameInputRes) project.name = nameInputRes;
+                if (linkInputRes) project.link = linkInputRes;
+            } catch (error) {
+                return false;
+            }
+
+            const editProject = await client.dataSources.getRepository(Project).save(project);
+            const successEmbed = new EmbedBuilder()
+                .setAuthor({ name: author.username, iconURL: author.displayAvatarURL() })
+                .setColor("Green")
+                .setTimestamp()
+                .setFooter({ text: "Powered by NekoYuki" })
+                .setTitle("Success")
+                .setDescription(`Project ${editProject.name} has been edited successfully, returning to the main menu...`);
+            const successMsg = await channel.send({ embeds: [successEmbed] });
+            const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+            await delay(3000);
+            successMsg.delete();
+            return true;
+        } catch (error) {
+            if (error instanceof CustomError) throw error;
+            throw new CustomError("An ***unknown*** error occurred", ErrorCode.InternalServerError, "Edit Project", error as Error);
+        }
         return true;
     }
-
-
 }
