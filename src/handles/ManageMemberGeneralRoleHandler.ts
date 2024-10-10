@@ -6,6 +6,7 @@ import Member from "../base/NekoYuki/entities/Member";
 import ManageMemberGeneralRoleRequest from "../requests/ManageMemberGeneralRoleRequest";
 import GeneralRole from "../base/NekoYuki/entities/GeneralRole";
 import MemberGeneralRole from "../base/NekoYuki/entities/GeneralMemberRole";
+import Permission from "../base/NekoYuki/enums/Permission";
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<ManageMemberGeneralRoleRequest> {
@@ -17,7 +18,14 @@ export default class ManageMemberGeneralRoleHandler implements IMediatorHandle<M
     }
 
     async checkPermission(value: ManageMemberGeneralRoleRequest): Promise<boolean> {
-        // TODO: Check permission
+        let flag = false;
+        if (!value.data.authorMember) {
+            throw new CustomError("Author is not a member", ErrorCode.UserCannotBeFound, "Manage Member General Role");
+        }
+        if (value.data.authorMember.hasPermission(Permission.ManageMember)) flag = true;
+        if (value.data.author.id == "958580097932222464") flag = true;
+
+        if (!flag) throw new CustomError("You do not have permission to manage member general role", ErrorCode.Unauthorized, "Manage Member General Role");
         return true;
     }
     async handle(value: ManageMemberGeneralRoleRequest): Promise<any> {

@@ -20,6 +20,7 @@ export default class CreateGeneralRoleHandler implements IMediatorHandle<CreateG
         if (value.data.authorMember.hasPermission(Permission.ManagePermission)) {
             hasPermission = true;
         }
+        
         if (!hasPermission) {
             throw new CustomError("You don't have permission to create a role.", ErrorCode.Forbidden, "Create General Role");
         }
