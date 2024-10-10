@@ -295,7 +295,7 @@ export default class ViewProjectHandler implements IMediatorHandle<ViewProjectRe
                 if (hasAdvancedProjectPermission) {
                     editRow.addComponents(deleteProjectBtn);
                 }
-                if (hasVerifiedProjectPermission) {
+                if (hasVerifiedProjectPermission && !project.verified) {
                     editRow.setComponents(verifyProjectBtn);
                 }
                 editRow.addComponents(returnBtn);

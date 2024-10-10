@@ -20,25 +20,24 @@ export default class ViewMemberProjectHandler implements IMediatorHandle<ViewMem
         try {
             const numberOfPendingProject = await value.data.client.dataSources.getRepository(ProjectMember)
                 .createQueryBuilder("projectMember")
-                .where("project.verified = false")
-                .andWhere("member.discordId = :id", { id: value.data.targetUser?.id })
                 .leftJoinAndSelect("projectMember.project", "project")
                 .leftJoinAndSelect("projectMember.member", "member")
+                .where("project.verified = false")
+                .andWhere("member.discordId = :id", { id: value.data.targetUser?.id })
                 .getCount();
             const numberOfProject = await value.data.client.dataSources.getRepository(ProjectMember)
                 .createQueryBuilder("projectMember")
-                .where("member.discordId = :id", { id: value.data.targetUser?.id })
                 .leftJoinAndSelect("projectMember.project", "project")
                 .leftJoinAndSelect("projectMember.member", "member")
+                .where("member.discordId = :id", { id: value.data.targetUser?.id })
                 .getCount();
             const first5PendingProject = await value.data.client.dataSources.getRepository(ProjectMember)
                 .createQueryBuilder("projectMember")
-                .where("project.verified = false")
-                .andWhere("member.discordId = :id", { id: value.data.targetUser?.id })
-                .orderBy("projectMember.createdAt", "DESC")
                 .leftJoinAndSelect("projectMember.project", "project")
-                .leftJoinAndSelect("projectMember.member", "member")
-                .leftJoinAndSelect("projectMember.role", "role")
+                .where("project.verified = false")
+                .innerJoinAndSelect("projectMember.member", "member")
+                .andWhere("member.discordId = :id", { id: value.data.targetUser?.id })
+                .innerJoinAndSelect("projectMember.role", "role")
                 .take(5)
                 .getMany();
             let memberProjectInfoString = `${value.data.targetUser?.displayName} have ${numberOfProject} project(s) in total, ${numberOfPendingProject} of them are pending.`;
